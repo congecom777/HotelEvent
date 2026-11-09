@@ -19,13 +19,13 @@ var EVENTS;
     });
   }
 
-  tryFetch("data/events.json")
+  // Try root events.json first, then data/events.json, then data%5Cevents.json fallback
+  tryFetch("events.json")
     .catch(function() {
-      // Fallback for Windows backslash zip deployment
-      return tryFetch("data%5Cevents.json");
+      return tryFetch("data/events.json");
     })
     .catch(function() {
-      return tryFetch("events.json");
+      return tryFetch("data%5Cevents.json");
     })
     .then(function(data) {
       EVENTS = data;
