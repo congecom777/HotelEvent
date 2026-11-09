@@ -1,0 +1,14 @@
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temp files
+*.tmp
+*.bak
+*.log
+
+
+# Zip archives
+*.zip
