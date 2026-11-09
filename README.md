@@ -1,4 +1,4 @@
-﻿# HotelEvent (Hospitality Demand Map Toronto)
+# HotelEvent (Hospitality Demand Map Toronto)
 
 An interactive cartographic platform tracking event-driven hospitality demand across Toronto and the Greater Toronto Area (GTA) for hoteliers, revenue managers, and sales teams.
 

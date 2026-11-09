@@ -8,8 +8,25 @@
 var EVENTS;
 
 (function boot() {
-  fetch("data/events.json")
-    .then(function(r) { return r.json(); })
+  function tryFetch(url) {
+    return fetch(url).then(function(r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      var ct = (r.headers.get("content-type") || "").toLowerCase();
+      if (ct.indexOf("html") !== -1) {
+        throw new Error("Server returned HTML instead of JSON for " + url);
+      }
+      return r.json();
+    });
+  }
+
+  tryFetch("data/events.json")
+    .catch(function() {
+      // Fallback for Windows backslash zip deployment
+      return tryFetch("data%5Cevents.json");
+    })
+    .catch(function() {
+      return tryFetch("events.json");
+    })
     .then(function(data) {
       EVENTS = data;
       initApp();
