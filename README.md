@@ -2,7 +2,7 @@
 
 An interactive cartographic platform tracking event-driven hospitality demand across Toronto and the Greater Toronto Area (GTA) for hoteliers, revenue managers, and sales teams.
 
-Live demo: Hosted on Cloudflare Pages.
+Live demo: [https://hotelevent.cong-ecom777.workers.dev/](https://hotelevent.cong-ecom777.workers.dev/)
 
 ---
 
