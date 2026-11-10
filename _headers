@@ -1,2 +1,4 @@
 /*
   X-Robots-Tag: noai, noimageai
+  X-Frame-Options: SAMEORIGIN
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
