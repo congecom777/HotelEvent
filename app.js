@@ -19,10 +19,10 @@ var EVENTS;
     });
   }
 
-  // Try root events.json first, then data/events.json, then data%5Cevents.json fallback
-  tryFetch("events.json")
+  // Try canonical data/events.json first, then root events.json, then Windows backslash zip fallback
+  tryFetch("data/events.json")
     .catch(function() {
-      return tryFetch("data/events.json");
+      return tryFetch("events.json");
     })
     .catch(function() {
       return tryFetch("data%5Cevents.json");

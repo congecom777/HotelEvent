@@ -2,7 +2,7 @@
 
 An interactive cartographic platform tracking event-driven hospitality demand across Toronto and the Greater Toronto Area (GTA) for hoteliers, revenue managers, and sales teams.
 
-Live demo: [https://hotelevent.cong-ecom777.workers.dev/](https://hotelevent.cong-ecom777.workers.dev/)
+Live demo: [https://hotelevent.pages.dev/](https://hotelevent.pages.dev/)
 
 ---
 
@@ -10,7 +10,7 @@ Live demo: [https://hotelevent.cong-ecom777.workers.dev/](https://hotelevent.con
 
 The project decouples frontend application logic from dataset storage, allowing data updates without touching any presentation or application code:
 
-`
+```text
 HotelEvent/
 │
 ├── index.html              # Lightweight HTML shell
@@ -24,7 +24,7 @@ HotelEvent/
 │
 ├── robots.txt              # AI crawler & search engine policy
 └── _headers                # Cloudflare response headers
-`
+```
 
 ---
 
@@ -40,15 +40,15 @@ HotelEvent/
 
 ## How to Update the Event Database
 
-1. Open [data/events.json](data/events.json).
+1. Open [`data/events.json`](data/events.json).
 2. Add or modify event records according to the [Database Guide](data/README.md).
 3. Commit and push:
-   `ash
+   ```bash
    git add data/events.json
    git commit -m "Update events database"
    git push origin main
-   `
-4. The web application dynamically fetches data/events.json on page load, automatically rendering the latest data.
+   ```
+4. The web application dynamically fetches `data/events.json` on page load, automatically rendering the latest data.
 
 ---
 
@@ -56,15 +56,15 @@ HotelEvent/
 
 Serve the directory with any standard static HTTP server:
 
-`ash
+```bash
 # Using Python
 python -m http.server 8000
 
 # Using Node.js (npx)
 npx serve .
-`
+```
 
-Open http://localhost:8000 in your browser.
+Open `http://localhost:8000` in your browser.
 
 ---
 

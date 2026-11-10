@@ -10,5 +10,7 @@ Thumbs.db
 *.log
 
 
-# Zip archives
+# Zip archives & build tools
 *.zip
+.wrangler/
+deploy/
