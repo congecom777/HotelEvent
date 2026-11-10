@@ -53,49 +53,7 @@ const CAT_KEYS = [
   "dining"
 ];
 
-/** Canonical curated Top 1-40 hotels matching the master Deep Scan tiers. */
-const TOP40_DEFS = [
-  { rank: 1, tier: "Top 1-20", name: "Sheraton Centre Toronto Hotel" },
-  { rank: 2, tier: "Top 1-20", name: "Fairmont Royal York" },
-  { rank: 3, tier: "Top 1-20", name: "InterContinental Toronto Centre" },
-  { rank: 4, tier: "Top 1-20", name: "The Westin Harbour Castle, Toronto" },
-  { rank: 5, tier: "Top 1-20", name: "Chelsea Hotel, Toronto" },
-  { rank: 6, tier: "Top 1-20", name: "Delta Hotels by Marriott Toronto" },
-  { rank: 7, tier: "Top 1-20", name: "Hilton Toronto" },
-  { rank: 8, tier: "Top 1-20", name: "Marriott Downtown at CF Toronto Eaton Centre" },
-  { rank: 9, tier: "Top 1-20", name: "The Omni King Edward Hotel" },
-  { rank: 10, tier: "Top 1-20", name: "One King West Hotel & Residence" },
-  { rank: 11, tier: "Top 1-20", name: "Hyatt Regency Toronto" },
-  { rank: 12, tier: "Top 1-20", name: "Hotel X Toronto" },
-  { rank: 13, tier: "Top 1-20", name: "Toronto Marriott City Centre Hotel" },
-  { rank: 14, tier: "Top 1-20", name: "Four Seasons Hotel Toronto" },
-  { rank: 15, tier: "Top 1-20", name: "The Ritz-Carlton, Toronto" },
-  { rank: 16, tier: "Top 1-20", name: "Delta Hotels by Marriott Toronto Airport & Conference Centre" },
-  { rank: 17, tier: "Top 1-20", name: "Toronto Airport Marriott Hotel" },
-  { rank: 18, tier: "Top 1-20", name: "Hilton Toronto/Markham Suites Conference Centre & Spa" },
-  { rank: 19, tier: "Top 1-20", name: "Sheraton Parkway Toronto North Hotel & Suites" },
-  { rank: 20, tier: "Top 1-20", name: "Toronto Don Valley Hotel & Suites" },
-  { rank: 21, tier: "Top 21-40", name: "Hilton Mississauga/Meadowvale" },
-  { rank: 22, tier: "Top 21-40", name: "Hilton Toronto Airport Hotel & Suites" },
-  { rank: 23, tier: "Top 21-40", name: "Sheraton Toronto Airport Hotel & Conference Centre" },
-  { rank: 24, tier: "Top 21-40", name: "The Westin Toronto Airport Hotel" },
-  { rank: 25, tier: "Top 21-40", name: "Holiday Inn Toronto International Airport" },
-  { rank: 26, tier: "Top 21-40", name: "Crowne Plaza Toronto Airport" },
-  { rank: 27, tier: "Top 21-40", name: "Hilton Garden Inn Toronto Airport" },
-  { rank: 28, tier: "Top 21-40", name: "Old Mill Toronto Hotel" },
-  { rank: 29, tier: "Top 21-40", name: "Novotel Toronto North York Hotel" },
-  { rank: 30, tier: "Top 21-40", name: "Montecassino Hotel & Event Centre" },
-  { rank: 31, tier: "Top 21-40", name: "Crowne Plaza Toronto – North York" },
-  { rank: 32, tier: "Top 21-40", name: "DoubleTree by Hilton Hotel Toronto Downtown" },
-  { rank: 33, tier: "Top 21-40", name: "Radisson Blu Toronto Downtown" },
-  { rank: 34, tier: "Top 21-40", name: "Shangri-La Toronto" },
-  { rank: 35, tier: "Top 21-40", name: "The St. Regis Toronto" },
-  { rank: 36, tier: "Top 21-40", name: "Park Hyatt Toronto" },
-  { rank: 37, tier: "Top 21-40", name: "Novotel Toronto Centre" },
-  { rank: 38, tier: "Top 21-40", name: "Toronto Marriott Markham" },
-  { rank: 39, tier: "Top 21-40", name: "Holiday Inn Burlington Hotel & Conference Centre" },
-  { rank: 40, tier: "Top 21-40", name: "The Pearle Hotel & Spa" }
-];
+/** Map duplicate venue spellings onto their canonical hotel name. */
 
 const HOTEL_ALIAS_MAP = {
   "sheraton centre toronto, 123 queen street west": "Sheraton Centre Toronto Hotel",
@@ -315,22 +273,13 @@ function computeHotelRows() {
     rec.cats[ev.cat] = (rec.cats[ev.cat] || 0) + 1;
   });
 
-  const rows = [];
-  let extraRank = 41;
-  const seen = new Set();
-
-  TOP40_DEFS.forEach(def => {
-    const rec = byName.get(def.name) || { name: def.name, area: "Toronto / GTA", y2025: 0, y2026: 0, y2027: 0, total: 0, cats: {} };
-    seen.add(def.name);
-    rows.push(finalizeHotelRow(def.rank, def.tier, rec));
-  });
-
-  Array.from(byName.values())
-    .filter(r => !seen.has(r.name))
-    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
-    .forEach(rec => rows.push(finalizeHotelRow(extraRank++, "Other", rec)));
-
-  HOTEL_ROWS = rows;
+  HOTEL_ROWS = Array.from(byName.values())
+    .sort((a, b) => b.total - a.total || b.y2027 - a.y2027 || a.name.localeCompare(b.name))
+    .map((rec, idx) => {
+      const rank = idx + 1;
+      const tier = rank <= 10 ? "Top 10" : (rank <= 20 ? "Top 11-20" : "");
+      return finalizeHotelRow(rank, tier, rec);
+    });
 }
 
 function finalizeHotelRow(rank, tier, rec) {
@@ -830,7 +779,7 @@ function renderCategoryLeaderCards(areas, scopeTotal) {
 
 window.filterHotels = function (tier) {
   currentHotelTier = tier;
-  const map = { ALL: "hTier-ALL", "Top 1-20": "hTier-Top1", "Top 21-40": "hTier-Top2", EXT: "hTier-EXT" };
+  const map = { ALL: "hTier-ALL", "Top 10": "hTier-Top10", "Top 11-20": "hTier-Top11", EXT: "hTier-EXT" };
   Object.entries(map).forEach(([k, id]) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("active", k === tier);
@@ -854,18 +803,21 @@ function syncHotelDropdownFromSort() {
 
 window.renderHotelsTable = function () {
   const q = (document.getElementById("hotelSearchInput").value || "").trim().toLowerCase();
-  const isNum = new Set(["rank", "y2025", "y2026", "y2027", "total"]).has(hotelSort.key);
+  const isNum = new Set(["rank", "tier", "y2025", "y2026", "y2027", "total"]).has(hotelSort.key);
   syncSortHeaderUI("#hotelsTable th[data-hotel-sort]", "data-hotel-sort", hotelSort);
 
   const filtered = HOTEL_ROWS.filter(h => {
     if (currentHotelTier === "ALL" && h.rank > 40) return false;
-    if ((currentHotelTier === "Top 1-20" || currentHotelTier === "Top 21-40") && h.tier !== currentHotelTier) return false;
+    if ((currentHotelTier === "Top 10" || currentHotelTier === "Top 11-20") && h.tier !== currentHotelTier) return false;
     if (q && !h.name.toLowerCase().includes(q) && !h.area.toLowerCase().includes(q)) return false;
     return true;
   }).sort((a, b) => {
-    const aVal = hotelSort.key === "topCat" ? (CAT_SHORT[a.topCat] || a.topCat) : a[hotelSort.key];
-    const bVal = hotelSort.key === "topCat" ? (CAT_SHORT[b.topCat] || b.topCat) : b[hotelSort.key];
-    return compareSortValues(aVal, bVal, hotelSort.dir, isNum) || (b.total - a.total) || (a.rank - b.rank);
+    const getVal = h => {
+      if (hotelSort.key === "tier") return h.tier === "Top 10" ? 1 : (h.tier === "Top 11-20" ? 2 : null);
+      if (hotelSort.key === "topCat") return CAT_SHORT[h.topCat] || h.topCat;
+      return h[hotelSort.key];
+    };
+    return compareSortValues(getVal(a), getVal(b), hotelSort.dir, isNum) || (b.total - a.total) || (a.rank - b.rank);
   });
 
   const showLiveRank = new Set(["total", "y2027", "y2026", "y2025"]).has(hotelSort.key);
@@ -873,13 +825,15 @@ window.renderHotelsTable = function () {
   const tbody = document.getElementById("hotelsTableBody");
   tbody.innerHTML = filtered.map((h, idx) => {
     const pct = Math.round((h.total / maxTot) * 100);
-    const tierCls = h.tier === "Top 1-20" ? "tier-1" : (h.tier === "Top 21-40" ? "tier-2" : "tier-other");
+    const tierHtml = h.tier
+      ? `<span class="tier-badge ${h.tier === "Top 10" ? "tier-1" : "tier-2"}">${esc(h.tier)}</span>`
+      : "";
     const shortQ = encodeURIComponent(h.name.split(",")[0]);
     const displayNum = showLiveRank ? (idx + 1) : h.rank;
     return `<tr>
       <td style="font-family:ui-monospace,monospace;color:var(--muted);">${displayNum}</td>
       <td style="font-weight:650;">${esc(h.name)}</td>
-      <td><span class="tier-badge ${tierCls}">${esc(h.tier)}</span></td>
+      <td>${tierHtml}</td>
       <td style="color:var(--muted);">${esc(h.area)}</td>
       <td><span class="cat-pill" style="background:${CAT_COLORS[h.topCat] || "#2563eb"}">${esc(CAT_SHORT[h.topCat] || h.topCat)}</span></td>
       <td class="num">${fmt(h.y2025)}</td>
