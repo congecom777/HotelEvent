@@ -183,11 +183,12 @@
           </div>
           <div class="controls-row" style="flex:1 1 320px;justify-content:flex-end;">
             <input id="hotelSearchInput" class="input-ctrl" style="max-width:280px;" type="search" placeholder="Search hotel name or area..." oninput="renderHotelsTable()"/>
-            <select id="hotelSortSel" class="select-ctrl" onchange="renderHotelsTable()" aria-label="Sort hotel leaderboard">
-              <option value="rank">By Top 1–40 Tier Rank</option>
-              <option value="total">Total Events (High → Low)</option>
+            <select id="hotelSortSel" class="select-ctrl" onchange="onHotelSortSelectChange()" aria-label="Sort hotel leaderboard">
+              <option value="total" selected>Total Events Found (High → Low)</option>
               <option value="y2027">2027 Events (High → Low)</option>
               <option value="y2026">2026 Events (High → Low)</option>
+              <option value="y2025">2025 Events (High → Low)</option>
+              <option value="rank">Original Tier Rank (1–40)</option>
             </select>
           </div>
         </div>
@@ -195,19 +196,19 @@
 
       <div class="card" style="overflow:hidden;">
         <div class="table-wrap">
-          <table class="data-tbl">
+          <table class="data-tbl" id="hotelsTable">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Hotel (Canonical Name)</th>
-                <th>Tier</th>
-                <th>Area</th>
-                <th>Primary Category</th>
-                <th class="num">2025</th>
-                <th class="num">2026</th>
-                <th class="num">2027</th>
-                <th class="num">Total</th>
-                <th style="min-width:150px;">Share</th>
+                <th class="sortable" data-hotel-sort="rank" tabindex="0">#<span class="sort-ind">↕</span></th>
+                <th class="sortable" data-hotel-sort="name" tabindex="0">Hotel (Canonical Name)<span class="sort-ind">↕</span></th>
+                <th class="sortable" data-hotel-sort="tier" tabindex="0">Tier<span class="sort-ind">↕</span></th>
+                <th class="sortable" data-hotel-sort="area" tabindex="0">Area<span class="sort-ind">↕</span></th>
+                <th class="sortable" data-hotel-sort="topCat" tabindex="0">Primary Category<span class="sort-ind">↕</span></th>
+                <th class="num sortable" data-hotel-sort="y2025" tabindex="0">2025<span class="sort-ind">↕</span></th>
+                <th class="num sortable" data-hotel-sort="y2026" tabindex="0">2026<span class="sort-ind">↕</span></th>
+                <th class="num sortable" data-hotel-sort="y2027" tabindex="0">2027<span class="sort-ind">↕</span></th>
+                <th class="num sortable sort-active" data-hotel-sort="total" tabindex="0">Total<span class="sort-ind">▼</span></th>
+                <th class="sortable" data-hotel-sort="total" style="min-width:150px;" tabindex="0">Share<span class="sort-ind">▼</span></th>
                 <th class="center">Map</th>
               </tr>
             </thead>
@@ -322,15 +323,15 @@
           </div>
         </div>
         <div class="table-scroll">
-          <table class="data-tbl">
+          <table class="data-tbl" id="explorerTable">
             <thead>
               <tr>
-                <th>Dates</th>
-                <th>Event Title</th>
-                <th>Venue</th>
-                <th>Area</th>
-                <th>Category</th>
-                <th class="num">Attendance</th>
+                <th class="sortable sort-active" data-exp-sort="start" tabindex="0">Dates<span class="sort-ind">▲</span></th>
+                <th class="sortable" data-exp-sort="name" tabindex="0">Event Title<span class="sort-ind">↕</span></th>
+                <th class="sortable" data-exp-sort="venue" tabindex="0">Venue<span class="sort-ind">↕</span></th>
+                <th class="sortable" data-exp-sort="area" tabindex="0">Area<span class="sort-ind">↕</span></th>
+                <th class="sortable" data-exp-sort="cat" tabindex="0">Category<span class="sort-ind">↕</span></th>
+                <th class="num sortable" data-exp-sort="att" tabindex="0">Attendance<span class="sort-ind">↕</span></th>
                 <th class="center">Source</th>
                 <th class="center">Map</th>
               </tr>

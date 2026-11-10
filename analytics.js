@@ -131,6 +131,8 @@ let EVENTS = [];
 let HOTEL_ROWS = [];
 let FILTERED_EXPLORER = [];
 let currentHotelTier = "ALL";
+let hotelSort = { key: "total", dir: "desc" };
+let explorerSort = { key: "start", dir: "asc" };
 let activeBubbleCat = "ALL";
 let selectedAreaKey = null;
 let explorerPage = 1;
@@ -141,6 +143,53 @@ let catLayer = null;
 let catTilesLoaded = 0;
 let catFallbackActive = false;
 const charts = {};
+
+/** Generic null-safe ascending/descending comparator for numbers and strings. */
+function compareSortValues(aVal, bVal, dir, isNum) {
+  const aEmpty = aVal == null || aVal === "";
+  const bEmpty = bVal == null || bVal === "";
+  if (aEmpty && bEmpty) return 0;
+  if (aEmpty) return 1;
+  if (bEmpty) return -1;
+  const cmp = isNum
+    ? Number(aVal) - Number(bVal)
+    : String(aVal).localeCompare(String(bVal), undefined, { sensitivity: "base" });
+  return dir === "asc" ? cmp : -cmp;
+}
+
+/** Update sort indicator glyphs and active class across sortable table headers. */
+function syncSortHeaderUI(selector, dataAttr, sortState) {
+  document.querySelectorAll(selector).forEach(th => {
+    const key = th.getAttribute(dataAttr);
+    const active = key === sortState.key;
+    th.classList.toggle("sort-active", active);
+    const ind = th.querySelector(".sort-ind");
+    if (ind) ind.textContent = active ? (sortState.dir === "asc" ? "▲" : "▼") : "↕";
+  });
+}
+
+/** Bind click + Enter/Space keyboard handlers to sortable table headers. */
+function bindSortableHeaders(selector, dataAttr, numericKeys, sortState, onSortChange) {
+  document.querySelectorAll(selector).forEach(th => {
+    const trigger = () => {
+      const key = th.getAttribute(dataAttr);
+      if (sortState.key === key) {
+        sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+      } else {
+        sortState.key = key;
+        sortState.dir = numericKeys.has(key) ? "desc" : "asc";
+      }
+      onSortChange();
+    };
+    th.addEventListener("click", trigger);
+    th.addEventListener("keydown", ev => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        trigger();
+      }
+    });
+  });
+}
 
 /** Escape HTML special characters before inserting into templates. */
 function esc(str) {
@@ -218,6 +267,14 @@ function initDashboard() {
   initCategoryBubbleMap();
   renderBubbleControls();
   renderCategoryBubbleView();
+  bindSortableHeaders("#hotelsTable th[data-hotel-sort]", "data-hotel-sort", new Set(["total", "y2027", "y2026", "y2025"]), hotelSort, () => {
+    syncHotelDropdownFromSort();
+    renderHotelsTable();
+  });
+  bindSortableHeaders("#explorerTable th[data-exp-sort]", "data-exp-sort", new Set(["att"]), explorerSort, () => {
+    explorerPage = 1;
+    renderExplorer();
+  });
   renderHotelsTable();
   renderDeepAnalytics();
   renderExplorer();
@@ -781,9 +838,24 @@ window.filterHotels = function (tier) {
   renderHotelsTable();
 };
 
+window.onHotelSortSelectChange = function () {
+  const mode = document.getElementById("hotelSortSel").value;
+  hotelSort.key = mode;
+  hotelSort.dir = mode === "rank" ? "asc" : "desc";
+  renderHotelsTable();
+};
+
+function syncHotelDropdownFromSort() {
+  const sel = document.getElementById("hotelSortSel");
+  if (!sel) return;
+  const preset = ["total", "y2027", "y2026", "y2025", "rank"];
+  if (preset.includes(hotelSort.key)) sel.value = hotelSort.key;
+}
+
 window.renderHotelsTable = function () {
   const q = (document.getElementById("hotelSearchInput").value || "").trim().toLowerCase();
-  const sortMode = document.getElementById("hotelSortSel").value;
+  const isNum = new Set(["rank", "y2025", "y2026", "y2027", "total"]).has(hotelSort.key);
+  syncSortHeaderUI("#hotelsTable th[data-hotel-sort]", "data-hotel-sort", hotelSort);
 
   const filtered = HOTEL_ROWS.filter(h => {
     if (currentHotelTier === "ALL" && h.rank > 40) return false;
@@ -791,20 +863,21 @@ window.renderHotelsTable = function () {
     if (q && !h.name.toLowerCase().includes(q) && !h.area.toLowerCase().includes(q)) return false;
     return true;
   }).sort((a, b) => {
-    if (sortMode === "total") return b.total - a.total || a.rank - b.rank;
-    if (sortMode === "y2027") return b.y2027 - a.y2027 || b.total - a.total;
-    if (sortMode === "y2026") return b.y2026 - a.y2026 || b.total - a.total;
-    return a.rank - b.rank;
+    const aVal = hotelSort.key === "topCat" ? (CAT_SHORT[a.topCat] || a.topCat) : a[hotelSort.key];
+    const bVal = hotelSort.key === "topCat" ? (CAT_SHORT[b.topCat] || b.topCat) : b[hotelSort.key];
+    return compareSortValues(aVal, bVal, hotelSort.dir, isNum) || (b.total - a.total) || (a.rank - b.rank);
   });
 
+  const showLiveRank = new Set(["total", "y2027", "y2026", "y2025"]).has(hotelSort.key);
   const maxTot = Math.max(1, ...HOTEL_ROWS.map(h => h.total));
   const tbody = document.getElementById("hotelsTableBody");
-  tbody.innerHTML = filtered.map(h => {
+  tbody.innerHTML = filtered.map((h, idx) => {
     const pct = Math.round((h.total / maxTot) * 100);
     const tierCls = h.tier === "Top 1-20" ? "tier-1" : (h.tier === "Top 21-40" ? "tier-2" : "tier-other");
     const shortQ = encodeURIComponent(h.name.split(",")[0]);
+    const displayNum = showLiveRank ? (idx + 1) : h.rank;
     return `<tr>
-      <td style="font-family:ui-monospace,monospace;color:var(--muted);">${h.rank}</td>
+      <td style="font-family:ui-monospace,monospace;color:var(--muted);">${displayNum}</td>
       <td style="font-weight:650;">${esc(h.name)}</td>
       <td><span class="tier-badge ${tierCls}">${esc(h.tier)}</span></td>
       <td style="color:var(--muted);">${esc(h.area)}</td>
@@ -1102,6 +1175,9 @@ window.renderExplorer = function () {
   const cat = document.getElementById("expCat").value;
   const area = document.getElementById("expArea").value;
 
+  syncSortHeaderUI("#explorerTable th[data-exp-sort]", "data-exp-sort", explorerSort);
+  const isNum = explorerSort.key === "att";
+
   FILTERED_EXPLORER = EVENTS.filter(ev => {
     if (yr !== "ALL" && !(ev.start || "").startsWith(yr)) return false;
     if (hFlag !== "ALL" && (ev.hotel ? "1" : "0") !== hFlag) return false;
@@ -1112,7 +1188,14 @@ window.renderExplorer = function () {
       if (!hay.includes(q)) return false;
     }
     return true;
-  }).sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+  }).sort((a, b) => {
+    const getVal = e => {
+      if (explorerSort.key === "att") return e.att ?? e.exp ?? e.act ?? null;
+      if (explorerSort.key === "cat") return CAT_SHORT[e.cat] || e.cat;
+      return e[explorerSort.key];
+    };
+    return compareSortValues(getVal(a), getVal(b), explorerSort.dir, isNum) || (a.start || "").localeCompare(b.start || "");
+  });
 
   renderExplorerPageOnly();
 };

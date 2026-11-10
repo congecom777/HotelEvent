@@ -538,3 +538,26 @@ footer a:hover { text-decoration: underline; }
   .kpi-grid, .leader-grid { grid-template-columns: 1fr; }
   .header-meta { margin-left: 0; }
 }
+
+
+table.data-tbl thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color .15s ease, background .15s ease;
+}
+table.data-tbl thead th.sortable:hover {
+  color: var(--ink);
+  background: var(--bg);
+}
+table.data-tbl thead th.sortable.sort-active {
+  color: var(--accent);
+}
+.sort-ind {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: 0.45;
+}
+th.sort-active .sort-ind {
+  opacity: 1;
+}
