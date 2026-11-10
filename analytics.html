@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <meta name="color-scheme" content="light dark"/>
   <title>Analytics &amp; Deep Scan | Hospitality Demand Map Toronto</title>
 
-  <meta name="description" content="Phân tích chuyên sâu 2.333+ sự kiện tại Toronto &amp; GTA: Bản đồ Bubble phân bổ danh mục theo khu vực, Top 1–40 khách sạn, chu kỳ mùa vụ, nhịp tuần, ngành nghề và tra cứu dữ liệu."/>
+  <meta name="description" content="In-depth demand analytics for 2,333+ verified Toronto &amp; GTA events: regional category bubble map, Top 1–40 hotels, seasonality, compression days, and searchable event explorer."/>
   <meta name="author" content="Minh Cong Nguyen"/>
   <meta name="robots" content="index, follow"/>
   <link rel="canonical" href="https://hotelevent.pages.dev/analytics.html"/>
@@ -14,7 +14,7 @@
   <meta property="og:type" content="website"/>
   <meta property="og:site_name" content="Hospitality Demand Map Toronto"/>
   <meta property="og:title" content="Analytics &amp; Deep Scan | Hospitality Demand Map Toronto"/>
-  <meta property="og:description" content="Bản đồ Bubble danh mục theo khu vực, Top 1–40 Khách sạn, Cắt lát Demand MICE vs Leisure và Tra cứu toàn bộ sự kiện tại Toronto &amp; GTA."/>
+  <meta property="og:description" content="Regional category bubble map, Top 1–40 Toronto &amp; GTA hotels, MICE vs. Citywide demand slicing, and full event explorer."/>
   <meta property="og:url" content="https://hotelevent.pages.dev/analytics.html"/>
   <meta property="og:image" content="https://hotelevent.pages.dev/og-image.png"/>
   <meta property="og:image:secure_url" content="https://hotelevent.pages.dev/og-image.png"/>
@@ -37,47 +37,47 @@
       <a class="nav-pill active" href="analytics.html">📊 Analytics &amp; Deep Scan</a>
     </nav>
     <div class="header-meta">
-      <span class="badge-status" id="analyticsStatus">Đang tải dữ liệu...</span>
+      <span class="badge-status" id="analyticsStatus">Loading dataset...</span>
       <span id="analyticsMeta">Toronto &amp; GTA · 2025–2027</span>
     </div>
   </header>
 
   <main class="container">
     <!-- KPI Strip -->
-    <section class="kpi-grid" aria-label="Tổng quan chỉ số">
+    <section class="kpi-grid" aria-label="Summary metrics">
       <div class="card kpi-card">
-        <div class="kpi-label">Tổng sự kiện xác minh</div>
+        <div class="kpi-label">Total Verified Events</div>
         <div class="kpi-value" id="kpiTotal">—</div>
-        <div class="kpi-sub" id="kpiTotalSub">Đang đồng bộ từ data/events.json</div>
+        <div class="kpi-sub" id="kpiTotalSub">Syncing from data/events.json</div>
       </div>
       <div class="card kpi-card">
-        <div class="kpi-label">Tại khách sạn (In-Hotel)</div>
+        <div class="kpi-label">Hotel Venues (In-Hotel)</div>
         <div class="kpi-value kpi-blue" id="kpiHotel">—</div>
         <div class="kpi-sub" id="kpiHotelSub">—</div>
       </div>
       <div class="card kpi-card">
-        <div class="kpi-label">Ngoài KS (Citywide Demand)</div>
+        <div class="kpi-label">Non-Hotel Venues (Citywide)</div>
         <div class="kpi-value kpi-amber" id="kpiNonHotel">—</div>
         <div class="kpi-sub" id="kpiNonHotelSub">—</div>
       </div>
       <div class="card kpi-card">
-        <div class="kpi-label">Sự kiện nhiều ngày (≥2d)</div>
+        <div class="kpi-label">Multi-Day Events (≥2d)</div>
         <div class="kpi-value kpi-purple" id="kpiMultiDay">—</div>
-        <div class="kpi-sub" id="kpiMultiDaySub">Tạo nhu cầu Room-Night trực tiếp</div>
+        <div class="kpi-sub" id="kpiMultiDaySub">Direct room-night demand drivers</div>
       </div>
       <div class="card kpi-card">
-        <div class="kpi-label">Độ phủ địa điểm &amp; nguồn</div>
+        <div class="kpi-label">Source URL &amp; Domain Coverage</div>
         <div class="kpi-value kpi-accent" id="kpiCoverage">—</div>
         <div class="kpi-sub" id="kpiCoverageSub">—</div>
       </div>
     </section>
 
     <!-- Section Tabs -->
-    <div class="tab-bar" role="tablist" aria-label="Trang con phân tích">
-      <button type="button" class="tab-btn active" id="tabBtn-bubbles" role="tab" aria-selected="true" onclick="switchAnalyticsTab('bubbles')">1. Bản Đồ Bubble Danh Mục</button>
-      <button type="button" class="tab-btn" id="tabBtn-hotels" role="tab" aria-selected="false" onclick="switchAnalyticsTab('hotels')">2. Top 1–40 Khách Sạn</button>
-      <button type="button" class="tab-btn" id="tabBtn-analytics" role="tab" aria-selected="false" onclick="switchAnalyticsTab('analytics')">3. Cắt Lát Sâu (Demand)</button>
-      <button type="button" class="tab-btn" id="tabBtn-explorer" role="tab" aria-selected="false" onclick="switchAnalyticsTab('explorer')">4. Tra Cứu Sự Kiện</button>
+    <div class="tab-bar" role="tablist" aria-label="Analytics sections">
+      <button type="button" class="tab-btn active" id="tabBtn-bubbles" role="tab" aria-selected="true" onclick="switchAnalyticsTab('bubbles')">1. Category Bubble Map</button>
+      <button type="button" class="tab-btn" id="tabBtn-hotels" role="tab" aria-selected="false" onclick="switchAnalyticsTab('hotels')">2. Top 1–40 Hotels</button>
+      <button type="button" class="tab-btn" id="tabBtn-analytics" role="tab" aria-selected="false" onclick="switchAnalyticsTab('analytics')">3. Deep Demand Analytics</button>
+      <button type="button" class="tab-btn" id="tabBtn-explorer" role="tab" aria-selected="false" onclick="switchAnalyticsTab('explorer')">4. Event Explorer</button>
     </div>
 
     <!-- TAB 1: CATEGORY BUBBLE DISTRIBUTION BY AREA -->
@@ -85,46 +85,46 @@
       <div class="card controls-card">
         <div class="controls-row">
           <div class="ctrl-group">
-            <span>Năm:</span>
-            <select id="bYear" class="select-ctrl" aria-label="Lọc theo năm">
-              <option value="ALL">2025–2027 (Tất cả)</option>
-              <option value="2025">Năm 2025</option>
-              <option value="2026">Năm 2026</option>
-              <option value="2027">Năm 2027</option>
+            <span>Year:</span>
+            <select id="bYear" class="select-ctrl" aria-label="Filter by year">
+              <option value="ALL">2025–2027 (All)</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+              <option value="2027">2027</option>
             </select>
           </div>
           <div class="ctrl-group">
-            <span>Địa điểm:</span>
-            <select id="bHotel" class="select-ctrl" aria-label="Lọc loại địa điểm">
-              <option value="ALL">Tất cả (In-Hotel &amp; Citywide)</option>
-              <option value="1">Chỉ tại khách sạn (In-Hotel)</option>
-              <option value="0">Chỉ ngoài khách sạn (Citywide)</option>
+            <span>Venue type:</span>
+            <select id="bHotel" class="select-ctrl" aria-label="Filter by venue type">
+              <option value="ALL">All (In-Hotel &amp; Citywide)</option>
+              <option value="1">Hotel venues only (In-Hotel)</option>
+              <option value="0">Non-hotel venues only (Citywide)</option>
             </select>
           </div>
           <div class="ctrl-group">
-            <span>Nhóm khu vực:</span>
-            <select id="bGroup" class="select-ctrl" aria-label="Cách gộp khu vực">
-              <option value="corridor" selected>Gộp hành lang GTA chuẩn (~14 vùng)</option>
-              <option value="raw">Chi tiết tất cả area gốc (23 vùng)</option>
+            <span>Area grouping:</span>
+            <select id="bGroup" class="select-ctrl" aria-label="Area grouping mode">
+              <option value="corridor" selected>GTA corridors (~14 regions)</option>
+              <option value="raw">All exact areas (23)</option>
             </select>
           </div>
           <div class="ctrl-group">
-            <span>Kiểu bản đồ:</span>
-            <select id="bMode" class="select-ctrl" aria-label="Kiểu hiển thị bong bóng">
-              <option value="area" selected>Bong bóng theo khu vực (màu theo danh mục #1)</option>
-              <option value="cluster">Tách chùm 9 danh mục quanh tâm từng khu vực</option>
+            <span>Bubble mode:</span>
+            <select id="bMode" class="select-ctrl" aria-label="Bubble display mode">
+              <option value="area" selected>Regional bubbles (colored by #1 category)</option>
+              <option value="cluster">Cluster all 9 categories around each region</option>
             </select>
           </div>
         </div>
-        <div class="chip-row" id="bCatChips" aria-label="Chọn danh mục sự kiện"></div>
+        <div class="chip-row" id="bCatChips" aria-label="Select event category"></div>
       </div>
 
       <div class="bubble-stage">
         <div class="card map-card">
           <div class="card-head">
             <div>
-              <h2 class="card-title" id="bMapTitle">Bản đồ Bubble Phân Bổ Danh Mục theo Khu Vực GTA</h2>
-              <p class="card-sub" id="bMapSub">Kích thước bóng tỷ lệ với số sự kiện · Bấm vào bong bóng để xem chi tiết cơ cấu danh mục tại khu vực</p>
+              <h2 class="card-title" id="bMapTitle">Regional Category Bubble Map</h2>
+              <p class="card-sub" id="bMapSub">Bubble size scales with event count · Click any region bubble to inspect its category breakdown</p>
             </div>
             <span class="badge-status" id="bActiveCount">—</span>
           </div>
@@ -136,12 +136,12 @@
 
         <aside class="card inspector-card" id="areaInspector">
           <div>
-            <h3 class="card-title" id="inspAreaTitle">Chọn một khu vực trên bản đồ</h3>
-            <p class="card-sub" id="inspAreaSub">Tỷ trọng các danh mục &amp; top địa điểm dẫn đầu</p>
+            <h3 class="card-title" id="inspAreaTitle">Select a region on the map</h3>
+            <p class="card-sub" id="inspAreaSub">Category share &amp; leading venues</p>
           </div>
-          <div id="inspBars" class="space-y-2" style="display:flex;flex-direction:column;gap:8px;"></div>
+          <div id="inspBars" style="display:flex;flex-direction:column;gap:8px;"></div>
           <div style="border-top:1px solid var(--line);padding-top:10px;">
-            <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Top địa điểm tại khu vực</div>
+            <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Top Venues in Region</div>
             <div id="inspVenues" style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;"></div>
           </div>
           <div id="inspMapBtnWrap" style="margin-top:auto;padding-top:8px;"></div>
@@ -151,8 +151,8 @@
       <div class="card chart-card">
         <div class="card-head" style="padding:0 0 10px 0;border-bottom:1px solid var(--line);">
           <div>
-            <h2 class="card-title">Ma Trận Bubble: Khu Vực GTA × 9 Danh Mục Sự Kiện</h2>
-            <p class="card-sub">Quan sát trực diện danh mục nào tập trung chủ yếu ở khu vực nào (diện tích bóng ∝ số sự kiện)</p>
+            <h2 class="card-title">Area × Category Concentration Bubble Matrix</h2>
+            <p class="card-sub">Compare at a glance which GTA regions drive each event category (bubble area ∝ event count)</p>
           </div>
         </div>
         <div class="chart-box-tall">
@@ -163,8 +163,8 @@
       <div class="card chart-card">
         <div class="card-head" style="padding:0 0 10px 0;border-bottom:1px solid var(--line);">
           <div>
-            <h2 class="card-title">Khu Vực Dẫn Đầu Từng Danh Mục (Category Concentration Summary)</h2>
-            <p class="card-sub">Top khu vực chiếm tỷ trọng cao nhất cho mỗi nhóm sự kiện theo bộ lọc năm/địa điểm đang chọn</p>
+            <h2 class="card-title">Top Regions by Category</h2>
+            <p class="card-sub">Leading GTA areas for each segment under active filters · Click any card to focus on the map</p>
           </div>
         </div>
         <div class="leader-grid" id="catLeadersGrid"></div>
@@ -176,18 +176,18 @@
       <div class="card controls-card">
         <div class="controls-row" style="justify-content:space-between;">
           <div class="chip-row">
-            <button type="button" class="chip active" id="hTier-ALL" onclick="filterHotels('ALL')">Tất cả Top 1–40 (40)</button>
-            <button type="button" class="chip" id="hTier-Top1" onclick="filterHotels('Top 1-20')">Nhóm Top 1–20 (20)</button>
-            <button type="button" class="chip" id="hTier-Top2" onclick="filterHotels('Top 21-40')">Nhóm Top 21–40 (20)</button>
-            <button type="button" class="chip" id="hTier-EXT" onclick="filterHotels('EXT')">Toàn bộ khách sạn</button>
+            <button type="button" class="chip active" id="hTier-ALL" onclick="filterHotels('ALL')">All Top 1–40 (40)</button>
+            <button type="button" class="chip" id="hTier-Top1" onclick="filterHotels('Top 1-20')">Tier Top 1–20 (20)</button>
+            <button type="button" class="chip" id="hTier-Top2" onclick="filterHotels('Top 21-40')">Tier Top 21–40 (20)</button>
+            <button type="button" class="chip" id="hTier-EXT" onclick="filterHotels('EXT')">All Hotels</button>
           </div>
           <div class="controls-row" style="flex:1 1 320px;justify-content:flex-end;">
-            <input id="hotelSearchInput" class="input-ctrl" style="max-width:280px;" type="search" placeholder="Tìm tên khách sạn hoặc khu vực..." oninput="renderHotelsTable()"/>
-            <select id="hotelSortSel" class="select-ctrl" onchange="renderHotelsTable()" aria-label="Sắp xếp bảng khách sạn">
-              <option value="rank">Theo thứ hạng chuẩn Top 1–40</option>
-              <option value="total">Tổng sự kiện giảm dần</option>
-              <option value="y2027">Sự kiện 2027 giảm dần</option>
-              <option value="y2026">Sự kiện 2026 giảm dần</option>
+            <input id="hotelSearchInput" class="input-ctrl" style="max-width:280px;" type="search" placeholder="Search hotel name or area..." oninput="renderHotelsTable()"/>
+            <select id="hotelSortSel" class="select-ctrl" onchange="renderHotelsTable()" aria-label="Sort hotel leaderboard">
+              <option value="rank">By Top 1–40 Tier Rank</option>
+              <option value="total">Total Events (High → Low)</option>
+              <option value="y2027">2027 Events (High → Low)</option>
+              <option value="y2026">2026 Events (High → Low)</option>
             </select>
           </div>
         </div>
@@ -199,16 +199,16 @@
             <thead>
               <tr>
                 <th>#</th>
-                <th>Khách sạn (Canonical Name)</th>
-                <th>Nhóm</th>
-                <th>Khu vực</th>
-                <th>Danh mục chính</th>
+                <th>Hotel (Canonical Name)</th>
+                <th>Tier</th>
+                <th>Area</th>
+                <th>Primary Category</th>
                 <th class="num">2025</th>
                 <th class="num">2026</th>
                 <th class="num">2027</th>
-                <th class="num">Tổng</th>
-                <th style="min-width:150px;">Tỷ trọng</th>
-                <th class="center">Bản đồ</th>
+                <th class="num">Total</th>
+                <th style="min-width:150px;">Share</th>
+                <th class="center">Map</th>
               </tr>
             </thead>
             <tbody id="hotelsTableBody"></tbody>
@@ -223,8 +223,8 @@
         <div class="card chart-card">
           <div class="card-head" style="padding:0 0 8px 0;">
             <div>
-              <h2 class="card-title">Chu kỳ Mùa vụ theo Tháng &amp; Năm (2025 – 2027)</h2>
-              <p class="card-sub">Tính trực tiếp theo tháng bắt đầu của toàn bộ dữ liệu</p>
+              <h2 class="card-title">Monthly &amp; Yearly Seasonality (2025 – 2027)</h2>
+              <p class="card-sub">Computed dynamically by event start month</p>
             </div>
           </div>
           <div class="chart-box"><canvas id="seasonalityChart"></canvas></div>
@@ -233,7 +233,7 @@
         <div class="card chart-card">
           <div class="card-head" style="padding:0 0 8px 0;">
             <div>
-              <h2 class="card-title">Cơ cấu 9 Danh mục Sự kiện</h2>
+              <h2 class="card-title">Category Breakdown (9 Segments)</h2>
               <p class="card-sub" id="catChartSub">—</p>
             </div>
           </div>
@@ -245,7 +245,7 @@
         <div class="card chart-card">
           <div class="card-head" style="padding:0 0 8px 0;">
             <div>
-              <h2 class="card-title">Nhịp Tuần: In-Hotel (Corporate MICE) vs. Ngoài KS (Citywide)</h2>
+              <h2 class="card-title">Day-of-Week Pattern: In-Hotel (Corporate MICE) vs. Citywide</h2>
               <p class="card-sub" id="dowInsight">—</p>
             </div>
           </div>
@@ -255,8 +255,8 @@
         <div class="card chart-card">
           <div class="card-head" style="padding:0 0 8px 0;">
             <div>
-              <h2 class="card-title">Phân rã theo Ngành nghề &amp; Động lực Cầu (Industry Verticals)</h2>
-              <p class="card-sub" id="verticalInsight">Phân loại tự động từ tên sự kiện, ghi chú &amp; danh mục</p>
+              <h2 class="card-title">Demand Drivers &amp; Industry Verticals</h2>
+              <p class="card-sub" id="verticalInsight">Auto-classified from event titles, notes &amp; categories</p>
             </div>
           </div>
           <div class="chart-box"><canvas id="verticalChart"></canvas></div>
@@ -267,12 +267,12 @@
         <div class="card chart-card">
           <div class="card-head" style="padding:0 0 8px 0;">
             <div>
-              <h2 class="card-title">Top Ngày Dồn Nén Cầu (Peak Compression Days)</h2>
+              <h2 class="card-title">Peak Compression Days</h2>
               <p class="card-sub" id="peakSummary">—</p>
             </div>
-            <select id="peakScope" class="select-ctrl" onchange="renderPeakDays()" aria-label="Phạm vi ngày nén cầu">
+            <select id="peakScope" class="select-ctrl" onchange="renderPeakDays()" aria-label="Compression scope">
               <option value="downtown" selected>Downtown Toronto</option>
-              <option value="all">Toàn GTA</option>
+              <option value="all">All GTA</option>
             </select>
           </div>
           <div id="peakDaysList" style="display:flex;flex-direction:column;gap:8px;"></div>
@@ -281,7 +281,7 @@
         <div class="card chart-card">
           <div class="card-head" style="padding:0 0 8px 0;">
             <div>
-              <h2 class="card-title">Cấu trúc Thời lượng &amp; Tác động Lưu trú (Room-Night Duration)</h2>
+              <h2 class="card-title">Event Duration &amp; Room-Night Impact</h2>
               <p class="card-sub" id="durationSummary">—</p>
             </div>
           </div>
@@ -294,45 +294,45 @@
     <section id="view-explorer" class="tab-panel">
       <div class="card controls-card">
         <div class="controls-row">
-          <input id="expSearch" class="input-ctrl" type="search" placeholder="Tìm tên sự kiện, khách sạn, địa điểm, ghi chú..." oninput="resetExplorerPageAndRender()"/>
-          <select id="expYear" class="select-ctrl" onchange="resetExplorerPageAndRender()" aria-label="Lọc năm">
-            <option value="ALL">Tất cả năm (2025–2027)</option>
+          <input id="expSearch" class="input-ctrl" type="search" placeholder="Search event title, hotel, venue, notes..." oninput="resetExplorerPageAndRender()"/>
+          <select id="expYear" class="select-ctrl" onchange="resetExplorerPageAndRender()" aria-label="Filter by year">
+            <option value="ALL">All Years (2025–2027)</option>
           </select>
-          <select id="expHotel" class="select-ctrl" onchange="resetExplorerPageAndRender()" aria-label="Lọc loại địa điểm">
-            <option value="ALL">Mọi địa điểm</option>
-            <option value="1">Tại khách sạn (In-Hotel)</option>
-            <option value="0">Ngoài khách sạn (Citywide)</option>
+          <select id="expHotel" class="select-ctrl" onchange="resetExplorerPageAndRender()" aria-label="Filter by venue type">
+            <option value="ALL">All Venues</option>
+            <option value="1">Hotel Venues (In-Hotel)</option>
+            <option value="0">Non-Hotel Venues (Citywide)</option>
           </select>
-          <select id="expCat" class="select-ctrl" onchange="resetExplorerPageAndRender()" aria-label="Lọc danh mục">
-            <option value="ALL">Mọi danh mục (9)</option>
+          <select id="expCat" class="select-ctrl" onchange="resetExplorerPageAndRender()" aria-label="Filter by category">
+            <option value="ALL">All Categories (9)</option>
           </select>
-          <select id="expArea" class="select-ctrl" onchange="resetExplorerPageAndRender()" aria-label="Lọc khu vực">
-            <option value="ALL">Mọi khu vực</option>
+          <select id="expArea" class="select-ctrl" onchange="resetExplorerPageAndRender()" aria-label="Filter by area">
+            <option value="ALL">All Areas</option>
           </select>
         </div>
       </div>
 
       <div class="card" style="overflow:hidden;">
         <div class="pager-bar">
-          <span id="expCountLabel">Đang tải...</span>
+          <span id="expCountLabel">Loading...</span>
           <div style="display:flex;gap:6px;align-items:center;">
-            <button type="button" class="btn-mini" id="expPrevBtn" onclick="changeExplorerPage(-1)">« Trước</button>
-            <span id="expPageLabel">Trang 1</span>
-            <button type="button" class="btn-mini" id="expNextBtn" onclick="changeExplorerPage(1)">Sau »</button>
+            <button type="button" class="btn-mini" id="expPrevBtn" onclick="changeExplorerPage(-1)">« Prev</button>
+            <span id="expPageLabel">Page 1</span>
+            <button type="button" class="btn-mini" id="expNextBtn" onclick="changeExplorerPage(1)">Next »</button>
           </div>
         </div>
         <div class="table-scroll">
           <table class="data-tbl">
             <thead>
               <tr>
-                <th>Ngày</th>
-                <th>Tên sự kiện</th>
-                <th>Địa điểm (Venue)</th>
-                <th>Khu vực</th>
-                <th>Danh mục</th>
-                <th class="num">Quy mô</th>
-                <th class="center">Nguồn</th>
-                <th class="center">Bản đồ</th>
+                <th>Dates</th>
+                <th>Event Title</th>
+                <th>Venue</th>
+                <th>Area</th>
+                <th>Category</th>
+                <th class="num">Attendance</th>
+                <th class="center">Source</th>
+                <th class="center">Map</th>
               </tr>
             </thead>
             <tbody id="explorerTableBody"></tbody>
@@ -343,7 +343,7 @@
   </main>
 
   <footer>
-    <span>Dữ liệu đồng bộ trực tiếp từ <code>data/events.json</code> · Toronto &amp; GTA (2025–2027)</span>
+    <span>Live synced from <code>data/events.json</code> · Toronto &amp; GTA (2025–2027)</span>
     <span>© 2026 <a href="https://www.linkedin.com/in/minhcong/" target="_blank" rel="noopener">Minh Cong Nguyen</a></span>
   </footer>
 

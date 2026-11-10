@@ -116,8 +116,6 @@ const HOTEL_ALIAS_MAP = {
   "novotel toronto north york hotel, 3 park home avenue, toronto": "Novotel Toronto North York Hotel"
 };
 
-const TOP40_BY_NAME = Object.fromEntries(TOP40_DEFS.map(d => [d.name, d]));
-
 const VERTICAL_RULES = [
   { label: "Tech / AI / Cyber", re: /\b(tech|ai|artificial intelligence|cyber|software|cloud|data|digital|devops|saas|it|developer|blockchain|crypto|web3|fintech|startup|innovation|security|robotics|quantum|analytics|machine learning|computing|iot|erp|crm|collision|elevate)\b/i },
   { label: "Finance / Real Estate", re: /\b(finance|financial|bank|banking|invest|investment|capital|wealth|equity|fund|hedge|real estate|reit|property|mortgage|insurance|accounting|tax|audit|actuar|treasury|pension|credit|venture|private markets|realtor|urban land|uli|boma)\b/i },
@@ -204,7 +202,7 @@ function tryFetchJson(url) {
     })
     .catch(err => {
       const badge = document.getElementById("analyticsStatus");
-      badge.textContent = "Lỗi tải dữ liệu: " + err.message;
+      badge.textContent = "Data load failed: " + err.message;
       badge.style.color = "#dc2626";
       console.error("Analytics boot failed:", err);
     });
@@ -212,7 +210,7 @@ function tryFetchJson(url) {
 
 function initDashboard() {
   const badge = document.getElementById("analyticsStatus");
-  badge.textContent = `${fmt(EVENTS.length)} sự kiện đang hoạt động`;
+  badge.textContent = `${fmt(EVENTS.length)} verified events live`;
 
   computeHotelRows();
   populateKpis();
@@ -273,7 +271,7 @@ function computeHotelRows() {
   Array.from(byName.values())
     .filter(r => !seen.has(r.name))
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
-    .forEach(rec => rows.push(finalizeHotelRow(extraRank++, "Khác", rec)));
+    .forEach(rec => rows.push(finalizeHotelRow(extraRank++, "Other", rec)));
 
   HOTEL_ROWS = rows;
 }
@@ -315,23 +313,23 @@ function populateKpis() {
     });
   });
 
-  const pct = n => total ? ((n / total) * 100).toFixed(1).replace(".", ",") : "0";
-  const pct40 = hotelEvents.length ? ((top40Sum / hotelEvents.length) * 100).toFixed(1).replace(".", ",") : "0";
+  const pct = n => total ? ((n / total) * 100).toFixed(1) : "0";
+  const pct40 = hotelEvents.length ? ((top40Sum / hotelEvents.length) * 100).toFixed(1) : "0";
 
   document.getElementById("kpiTotal").textContent = fmt(total);
-  document.getElementById("kpiTotalSub").textContent = `${fmt(venues.size)} địa điểm · 2025–2027`;
+  document.getElementById("kpiTotalSub").textContent = `${fmt(venues.size)} venues · 2025–2027`;
   document.getElementById("kpiHotel").innerHTML = `${fmt(hotelEvents.length)} <small>(${pct(hotelEvents.length)}%)</small>`;
-  document.getElementById("kpiHotelSub").textContent = `Top 40 chiếm ${fmt(top40Sum)} (${pct40}%)`;
+  document.getElementById("kpiHotelSub").textContent = `Top 40 capture ${fmt(top40Sum)} (${pct40}%)`;
   document.getElementById("kpiNonHotel").innerHTML = `${fmt(nonHotelEvents.length)} <small>(${pct(nonHotelEvents.length)}%)</small>`;
-  document.getElementById("kpiNonHotelSub").textContent = `Sự kiện đại chúng / Citywide`;
+  document.getElementById("kpiNonHotelSub").textContent = `Citywide & public major venues`;
   document.getElementById("kpiMultiDay").innerHTML = `${fmt(multiDay)} <small>(${pct(multiDay)}%)</small>`;
-  document.getElementById("kpiMultiDaySub").textContent = `${fmt(multiHotel)} tại KS · ${fmt(multiNon)} ngoài KS`;
-  document.getElementById("kpiCoverage").textContent = `${fmt(urlCount)} URL`;
-  document.getElementById("kpiCoverageSub").textContent = `${fmt(domains.size)} tên miền nguồn`;
+  document.getElementById("kpiMultiDaySub").textContent = `${fmt(multiHotel)} in-hotel · ${fmt(multiNon)} citywide`;
+  document.getElementById("kpiCoverage").textContent = `${fmt(urlCount)} URLs`;
+  document.getElementById("kpiCoverageSub").textContent = `${fmt(domains.size)} source domains`;
 
-  document.getElementById("tabBtn-explorer").textContent = `4. Tra Cứu ${fmt(total)} Sự Kiện`;
+  document.getElementById("tabBtn-explorer").textContent = `4. Event Explorer (${fmt(total)})`;
   const extBtn = document.getElementById("hTier-EXT");
-  if (extBtn) extBtn.textContent = `Toàn bộ khách sạn (${HOTEL_ROWS.length})`;
+  if (extBtn) extBtn.textContent = `All Hotels (${HOTEL_ROWS.length})`;
 }
 
 /** Switch sub-tabs cleanly and resize charts/map when their container becomes visible. */
@@ -393,7 +391,7 @@ function renderBubbleControls() {
   EVENTS.forEach(e => { counts[e.cat] = (counts[e.cat] || 0) + 1; });
 
   const allBtn = `<button type="button" class="chip ${activeBubbleCat === "ALL" ? "active" : ""}" data-bcat="ALL" onclick="selectBubbleCat('ALL')">
-    Tất cả danh mục <span class="cnt">${fmt(EVENTS.length)}</span>
+    All Categories <span class="cnt">${fmt(EVENTS.length)}</span>
   </button>`;
 
   const catBtns = CAT_KEYS.map(c => `<button type="button" class="chip ${activeBubbleCat === c ? "active" : ""}" data-bcat="${c}" onclick="selectBubbleCat('${c}')">
@@ -428,7 +426,6 @@ function renderCategoryBubbleView() {
   const groupMode = document.getElementById("bGroup").value;
   const dispMode = document.getElementById("bMode").value;
 
-  // Refresh chip counts dynamically for active year/hotel scope
   const catTotals = {};
   scoped.forEach(e => { catTotals[e.cat] = (catTotals[e.cat] || 0) + 1; });
   document.querySelectorAll("#bCatChips .chip").forEach(btn => {
@@ -437,7 +434,6 @@ function renderCategoryBubbleView() {
     if (cntEl) cntEl.textContent = fmt(c === "ALL" ? scoped.length : (catTotals[c] || 0));
   });
 
-  // Aggregate by normalized area
   const areaMap = new Map();
   scoped.forEach(e => {
     const areaName = normalizeArea(e.area, groupMode);
@@ -465,10 +461,10 @@ function renderCategoryBubbleView() {
   }).sort((a, b) => b.activeCount - a.activeCount || b.total - a.total);
 
   const totalDisplayed = areas.reduce((s, a) => s + a.activeCount, 0);
-  document.getElementById("bActiveCount").textContent = `${fmt(totalDisplayed)} sự kiện · ${areas.filter(a => a.activeCount > 0).length} khu vực`;
+  document.getElementById("bActiveCount").textContent = `${fmt(totalDisplayed)} events · ${areas.filter(a => a.activeCount > 0).length} areas`;
 
-  const catLabel = activeBubbleCat === "ALL" ? "Tất cả 9 danh mục" : CAT_LABELS[activeBubbleCat];
-  document.getElementById("bMapTitle").textContent = `Bản đồ Bubble: ${catLabel}`;
+  const catLabel = activeBubbleCat === "ALL" ? "All 9 Categories" : CAT_LABELS[activeBubbleCat];
+  document.getElementById("bMapTitle").textContent = `Regional Bubble Map: ${catLabel}`;
 
   if (!selectedAreaKey || !areaMap.has(selectedAreaKey)) {
     selectedAreaKey = areas.length ? areas[0].area : null;
@@ -498,12 +494,10 @@ function renderCatLeafletBubbles(areas, dispMode) {
   const maxVal = Math.max(1, ...nonZero.map(a => a.activeCount));
 
   if (activeBubbleCat === "ALL" && dispMode === "cluster") {
-    // Cluster 1 mini-bubble per category around each area centroid
     let maxCat = 1;
     nonZero.forEach(a => Object.values(a.cats).forEach(v => { if (v > maxCat) maxCat = v; }));
     nonZero.forEach(a => {
       const entries = Object.entries(a.cats).sort((x, y) => y[1] - x[1]);
-      // Label for the district center
       L.marker([a.lat, a.lng], {
         icon: L.divIcon({
           className: "area-bubble-icon",
@@ -540,14 +534,13 @@ function renderCatLeafletBubbles(areas, dispMode) {
     return;
   }
 
-  // Standard proportional district bubbles (sorted large->small so smaller bubbles stay clickable on top)
   nonZero.slice().reverse().forEach(a => {
     const color = activeBubbleCat === "ALL" ? CAT_COLORS[a.domCat] : CAT_COLORS[activeBubbleCat];
     const size = bubblePixelSize(a.activeCount, maxVal, 26, 74);
     const isSel = a.area === selectedAreaKey;
     const share = activeBubbleCat === "ALL"
       ? `${CAT_SHORT[a.domCat]} ${Math.round((a.domCnt / a.total) * 100)}%`
-      : `${Math.round((a.activeCount / Math.max(1, a.total)) * 100)}% của vùng`;
+      : `${Math.round((a.activeCount / Math.max(1, a.total)) * 100)}% of region`;
 
     const marker = L.marker([a.lat, a.lng], {
       icon: L.divIcon({
@@ -563,8 +556,8 @@ function renderCatLeafletBubbles(areas, dispMode) {
 
     marker.bindTooltip(
       `<b>${esc(a.area)}</b><br>` +
-      `${activeBubbleCat === "ALL" ? "Tổng" : esc(CAT_SHORT[activeBubbleCat])}: <b>${fmt(a.activeCount)}</b> sự kiện (${esc(share)})` +
-      `<br><small>Bấm để xem cơ cấu 9 danh mục</small>`,
+      `${activeBubbleCat === "ALL" ? "Total" : esc(CAT_SHORT[activeBubbleCat])}: <b>${fmt(a.activeCount)}</b> events (${esc(share)})` +
+      `<br><small>Click to inspect category mix</small>`,
       { direction: "top", offset: [0, -10] }
     );
     marker.on("click", () => {
@@ -619,16 +612,16 @@ function renderAreaInspector(areaObj) {
   const btnWrap = document.getElementById("inspMapBtnWrap");
 
   if (!areaObj) {
-    titleEl.textContent = "Không có dữ liệu phù hợp bộ lọc";
-    subEl.textContent = "Hãy đổi bộ lọc năm hoặc danh mục";
+    titleEl.textContent = "No events match current filters";
+    subEl.textContent = "Adjust year or category filter";
     barsEl.innerHTML = "";
     venuesEl.innerHTML = "";
     btnWrap.innerHTML = "";
     return;
   }
 
-  titleEl.textContent = `${areaObj.area} (${fmt(areaObj.total)} sự kiện)`;
-  subEl.textContent = `Danh mục chủ đạo: ${CAT_LABELS[areaObj.domCat]} (${Math.round((areaObj.domCnt / areaObj.total) * 100)}%)`;
+  titleEl.textContent = `${areaObj.area} (${fmt(areaObj.total)} events)`;
+  subEl.textContent = `Primary category: ${CAT_LABELS[areaObj.domCat]} (${Math.round((areaObj.domCnt / areaObj.total) * 100)}%)`;
 
   const catEntries = Object.entries(areaObj.cats).sort((a, b) => b[1] - a[1]);
   barsEl.innerHTML = catEntries.map(([c, cnt]) => {
@@ -655,7 +648,7 @@ function renderAreaInspector(areaObj) {
   ).join("");
 
   const searchQ = encodeURIComponent(areaObj.area === "Airport Corridor" ? "Airport" : areaObj.area);
-  btnWrap.innerHTML = `<a class="btn-mini" style="width:100%;text-align:center;padding:8px 12px;" href="index.html?q=${searchQ}&all=1">📍 Mở danh sách khu vực này trên Bản đồ ↗</a>`;
+  btnWrap.innerHTML = `<a class="btn-mini" style="width:100%;text-align:center;padding:8px 12px;" href="index.html?q=${searchQ}&all=1">📍 View this region on Demand Map ↗</a>`;
 }
 
 function renderAreaCategoryBubbleMatrix(areas) {
@@ -704,7 +697,7 @@ function renderAreaCategoryBubbleMatrix(areas) {
             label(ctx) {
               const raw = ctx.raw;
               const pctArea = ((raw.count / raw.areaTotal) * 100).toFixed(1);
-              return `${raw.areaName} · ${raw.catName}: ${fmt(raw.count)} sự kiện (${pctArea}% của khu vực)`;
+              return `${raw.areaName} · ${raw.catName}: ${fmt(raw.count)} events (${pctArea}% of region)`;
             }
           }
         }
@@ -760,7 +753,7 @@ function renderCategoryLeaderCards(areas, scopeTotal) {
             <span>${fmt(n)} (${pct}%)</span>
           </div>`;
         }).join("")
-      : `<div style="font-size:12px;color:var(--muted);">Không có sự kiện trong bộ lọc</div>`;
+      : `<div style="font-size:12px;color:var(--muted);">No events match current filter</div>`;
 
     const shareAll = scopeTotal ? ((catTotal / scopeTotal) * 100).toFixed(1) : "0";
     return `<div class="leader-item" style="cursor:pointer;" onclick="selectBubbleCat('${c}')">
@@ -844,7 +837,6 @@ function renderDeepAnalytics() {
   const textCol = getChartTextColor();
   const gridCol = getChartGridColor();
 
-  // 1. Seasonality Chart (2025, 2026, 2027)
   const m25 = new Array(12).fill(0);
   const m26 = new Array(12).fill(0);
   const m27 = new Array(12).fill(0);
@@ -878,7 +870,7 @@ function renderDeepAnalytics() {
   charts.seasonality = new Chart(document.getElementById("seasonalityChart"), {
     type: "bar",
     data: {
-      labels: ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"],
+      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
       datasets: [
         { label: "2025", data: m25, backgroundColor: "#64748b" },
         { label: "2026", data: m26, backgroundColor: "#2563eb" },
@@ -896,8 +888,7 @@ function renderDeepAnalytics() {
     }
   });
 
-  // 2. Category Doughnut Chart
-  document.getElementById("catChartSub").textContent = `Tổng n = ${fmt(EVENTS.length)} sự kiện`;
+  document.getElementById("catChartSub").textContent = `Total n = ${fmt(EVENTS.length)} events`;
   if (charts.category) charts.category.destroy();
   charts.category = new Chart(document.getElementById("categoryChart"), {
     type: "doughnut",
@@ -917,13 +908,12 @@ function renderDeepAnalytics() {
     }
   });
 
-  // 3. Day-of-Week Chart
   const tueToFri = dowHotel[1] + dowHotel[2] + dowHotel[3] + dowHotel[4];
   const hotelTot = dowHotel.reduce((a, b) => a + b, 0);
   const peakDowIdx = dowHotel.indexOf(Math.max(...dowHotel));
-  const dowLabels = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "CN"];
+  const dowLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   document.getElementById("dowInsight").textContent =
-    `${((tueToFri / Math.max(1, hotelTot)) * 100).toFixed(1)}% sự kiện KS bắt đầu T3–T6 (đỉnh ${dowLabels[peakDowIdx]}: ${fmt(dowHotel[peakDowIdx])}); ngoài KS dồn cuối tuần.`;
+    `${((tueToFri / Math.max(1, hotelTot)) * 100).toFixed(1)}% of hotel events start Tue–Fri (peak ${dowLabels[peakDowIdx]}: ${fmt(dowHotel[peakDowIdx])}); citywide skews Fri–Sun.`;
 
   if (charts.dow) charts.dow.destroy();
   charts.dow = new Chart(document.getElementById("dowChart"), {
@@ -931,8 +921,8 @@ function renderDeepAnalytics() {
     data: {
       labels: dowLabels,
       datasets: [
-        { label: "Tại khách sạn (In-Hotel)", data: dowHotel, backgroundColor: "#2563eb" },
-        { label: "Ngoài khách sạn (Citywide)", data: dowNon, backgroundColor: "#f59e0b" }
+        { label: "In-Hotel (MICE)", data: dowHotel, backgroundColor: "#2563eb" },
+        { label: "Non-Hotel (Citywide)", data: dowNon, backgroundColor: "#f59e0b" }
       ]
     },
     options: {
@@ -946,7 +936,6 @@ function renderDeepAnalytics() {
     }
   });
 
-  // 4. Industry Verticals Chart (sorted descending)
   const pairedVerts = VERTICAL_RULES.map((r, i) => ({ label: r.label, count: vertCounts[i] }))
     .sort((a, b) => b.count - a.count);
 
@@ -956,7 +945,7 @@ function renderDeepAnalytics() {
     data: {
       labels: pairedVerts.map(v => v.label),
       datasets: [{
-        label: "Số sự kiện theo nhóm ngành",
+        label: "Events",
         data: pairedVerts.map(v => v.count),
         backgroundColor: "#8b5cf6"
       }]
@@ -1006,7 +995,7 @@ window.renderPeakDays = function () {
   const ge6 = sorted.filter(x => x.list.length >= 6).length;
   const ge10 = sorted.filter(x => x.list.length >= 10).length;
   document.getElementById("peakSummary").textContent =
-    `${fmt(ge6)} ngày có ≥6 sự kiện đồng thời · ${fmt(ge10)} ngày đạt ngưỡng ≥10 sự kiện`;
+    `${fmt(ge6)} days with ≥6 concurrent events · ${fmt(ge10)} days reaching ≥10 events`;
 
   document.getElementById("peakDaysList").innerHTML = sorted.slice(0, 6).map((item, idx) => {
     const names = item.list.slice(0, 3).map(e => esc(e.name)).join(" · ");
@@ -1014,17 +1003,17 @@ window.renderPeakDays = function () {
     const color = idx === 0 ? "#dc2626" : (idx === 1 ? "#d97706" : "var(--blue)");
     return `<div class="peak-item">
       <div><b style="color:${color};">${item.day}</b> — ${names}${extra}</div>
-      <span class="peak-count">${item.list.length} sự kiện</span>
+      <span class="peak-count">${item.list.length} events</span>
     </div>`;
   }).join("");
 };
 
 function renderDurationBreakdown() {
   const buckets = [
-    { key: "2-3", label: "2–3 ngày (Xương sống MICE, giải đấu, hội nghị)", count: 0, color: "#2563eb" },
-    { key: "1", label: "1 ngày (Hội thảo chuyên đề, Gala, Concert)", count: 0, color: "#64748b" },
-    { key: "4-7", label: "4–7 ngày (Hội nghị quốc tế, Triển lãm lớn)", count: 0, color: "#9333ea" },
-    { key: "8+", label: "8+ ngày (Lễ hội toàn thành phố: TIFF, CNE, AutoShow)", count: 0, color: "#0f766e" }
+    { key: "2-3", label: "2–3 days (Core MICE conferences, tournaments, competitions)", count: 0, color: "#2563eb" },
+    { key: "1", label: "1 day (Single-day workshops, galas, arena concerts)", count: 0, color: "#64748b" },
+    { key: "4-7", label: "4–7 days (International congresses, major trade shows)", count: 0, color: "#9333ea" },
+    { key: "8+", label: "8+ days (Citywide festivals: TIFF, CNE, AutoShow)", count: 0, color: "#0f766e" }
   ];
   let multiH = 0, multiNH = 0;
 
@@ -1044,14 +1033,14 @@ function renderDurationBreakdown() {
   const tot = Math.max(1, EVENTS.length);
   const multiTot = multiH + multiNH;
   document.getElementById("durationSummary").textContent =
-    `${((multiTot / tot) * 100).toFixed(1)}% sự kiện kéo dài ≥2 ngày (${fmt(multiH)} tại KS, ${fmt(multiNH)} ngoài KS)`;
+    `${((multiTot / tot) * 100).toFixed(1)}% span ≥2 days (${fmt(multiH)} in-hotel, ${fmt(multiNH)} citywide)`;
 
   document.getElementById("durationBars").innerHTML = buckets.map(b => {
     const pct = ((b.count / tot) * 100).toFixed(1);
     return `<div class="bar-row">
       <div class="bar-row-head">
         <span>${esc(b.label)}</span>
-        <span style="font-weight:700;color:${b.color};">${fmt(b.count)} sự kiện (${pct}%)</span>
+        <span style="font-weight:700;color:${b.color};">${fmt(b.count)} events (${pct}%)</span>
       </div>
       <div class="bar-track" style="height:10px;"><div class="bar-fill" style="width:${pct}%;background:${b.color}"></div></div>
     </div>`;
@@ -1075,21 +1064,21 @@ function populateExplorerFilters() {
   });
 
   const yrSel = document.getElementById("expYear");
-  yrSel.innerHTML = `<option value="ALL">Tất cả năm (${fmt(EVENTS.length)})</option>` +
-    Object.keys(yearCounts).sort().map(y => `<option value="${y}">Năm ${y} (${fmt(yearCounts[y])})</option>`).join("");
+  yrSel.innerHTML = `<option value="ALL">All Years (${fmt(EVENTS.length)})</option>` +
+    Object.keys(yearCounts).sort().map(y => `<option value="${y}">${y} (${fmt(yearCounts[y])})</option>`).join("");
 
   const hEvents = EVENTS.filter(e => e.hotel).length;
   document.getElementById("expHotel").innerHTML =
-    `<option value="ALL">Mọi địa điểm (${fmt(EVENTS.length)})</option>` +
-    `<option value="1">Tại khách sạn (${fmt(hEvents)})</option>` +
-    `<option value="0">Ngoài khách sạn (${fmt(EVENTS.length - hEvents)})</option>`;
+    `<option value="ALL">All Venues (${fmt(EVENTS.length)})</option>` +
+    `<option value="1">Hotel Venues (${fmt(hEvents)})</option>` +
+    `<option value="0">Non-Hotel Venues (${fmt(EVENTS.length - hEvents)})</option>`;
 
   document.getElementById("expCat").innerHTML =
-    `<option value="ALL">Mọi danh mục (${CAT_KEYS.length})</option>` +
+    `<option value="ALL">All Categories (${CAT_KEYS.length})</option>` +
     CAT_KEYS.map(c => `<option value="${c}">${esc(CAT_SHORT[c])} (${fmt(catCounts[c] || 0)})</option>`).join("");
 
   document.getElementById("expArea").innerHTML =
-    `<option value="ALL">Mọi khu vực (${Object.keys(areaCounts).length})</option>` +
+    `<option value="ALL">All Areas (${Object.keys(areaCounts).length})</option>` +
     Object.entries(areaCounts).sort((a, b) => b[1] - a[1]).map(([a, n]) =>
       `<option value="${esc(a)}">${esc(a)} (${fmt(n)})</option>`
     ).join("");
@@ -1138,9 +1127,9 @@ function renderExplorerPageOnly() {
 
   document.getElementById("expCountLabel").textContent =
     total === 0
-      ? "Không tìm thấy sự kiện phù hợp"
-      : `Tìm thấy ${fmt(total)} sự kiện (hiển thị ${fmt(start + 1)}–${fmt(start + slice.length)})`;
-  document.getElementById("expPageLabel").textContent = `Trang ${explorerPage} / ${maxPage}`;
+      ? "No matching events found"
+      : `Found ${fmt(total)} events (showing ${fmt(start + 1)}–${fmt(start + slice.length)})`;
+  document.getElementById("expPageLabel").textContent = `Page ${explorerPage} / ${maxPage}`;
   document.getElementById("expPrevBtn").disabled = explorerPage <= 1;
   document.getElementById("expNextBtn").disabled = explorerPage >= maxPage;
 
@@ -1149,7 +1138,7 @@ function renderExplorerPageOnly() {
     const hBadge = ev.hotel ? `<span class="tag-hotel">Hotel</span>` : "";
     const histBadge = ev.hist ? `<span class="tag-hist">Past</span>` : "";
     const srcUrl = ev.url || (Array.isArray(ev.urls) && ev.urls[0]) || "";
-    const linkHtml = srcUrl ? `<a class="mini-link" href="${esc(srcUrl)}" target="_blank" rel="noopener">Mở ↗</a>` : "—";
+    const linkHtml = srcUrl ? `<a class="mini-link" href="${esc(srcUrl)}" target="_blank" rel="noopener">Open ↗</a>` : "—";
     const qMap = encodeURIComponent(ev.name);
     return `<tr>
       <td style="font-family:ui-monospace,monospace;white-space:nowrap;">${esc(dateStr)}</td>
