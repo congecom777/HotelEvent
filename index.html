@@ -110,8 +110,8 @@
           <div class="ctrl-group">
             <span>Area grouping:</span>
             <select id="bGroup" class="select-ctrl" aria-label="Area grouping mode">
-              <option value="corridor" selected>GTA corridors (grouped)</option>
-              <option value="raw">All exact areas</option>
+              <option value="corridor" selected>GTA corridors (Airport + West Toronto/Etobicoke)</option>
+              <option value="raw">All exact areas (no grouping)</option>
             </select>
           </div>
           <div class="ctrl-group">
@@ -130,7 +130,7 @@
           <div class="card-head">
             <div>
               <h2 class="card-title" id="bMapTitle">Regional Category Bubble Map</h2>
-              <p class="card-sub" id="bMapSub">Bubble size scales with event count · Click any region bubble to inspect its category breakdown</p>
+              <p class="card-sub" id="bMapSub">Grouped mode merges only Airport sub-areas &amp; Etobicoke + West Toronto · Markham, Richmond Hill &amp; Vaughan stay separate</p>
             </div>
             <span class="badge-status" id="bActiveCount">—</span>
           </div>
@@ -183,6 +183,9 @@
     <!-- TAB 2: TOP 1-40 HOTELS -->
     <section id="view-hotels" class="tab-panel">
       <div class="card controls-card">
+        <p class="card-sub" style="margin:0 0 10px;">
+          <b>Area</b> shows each hotel's home municipality (Markham, Richmond Hill, and Vaughan remain separate). Event counts combine direct bookings and multi-hotel partner blocks.
+        </p>
         <div class="controls-row" style="justify-content:space-between;">
           <div class="chip-row">
             <button type="button" class="chip active" id="hTier-ALL" onclick="filterHotels('ALL')">All Top 1–40 (40)</button>

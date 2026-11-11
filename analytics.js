@@ -75,6 +75,75 @@ const HOTEL_ALIAS_MAP = {
   "novotel toronto north york hotel, 3 park home avenue, toronto": "Novotel Toronto North York Hotel"
 };
 
+/** Explicit home-municipality overrides when direct bookings alone are generic or tied. */
+const HOTEL_AREA_OVERRIDES = {
+  "Best Western Parkway Hotel Toronto North": "Richmond Hill",
+  "Toronto Don Valley Hotel & Suites": "North York",
+  "Holiday Inn Express & Suites Toronto Airport West": "Mississauga",
+  "DoubleTree by Hilton Hotel Toronto Airport West": "Mississauga",
+  "DoubleTree by Hilton Toronto Airport West": "Mississauga",
+  "Westin Harbour Castle, Toronto": "Downtown Toronto",
+  "Best Western Plus Durham Hotel & Conference Centre": "Oshawa",
+  "Holiday Inn Express Whitby Oshawa": "Oshawa",
+  "Comfort Inn Pickering": "Pickering",
+  "Super 8 by Wyndham Ajax/Toronto": "Ajax",
+  "Best Western Voyageur Place Hotel": "Newmarket",
+  "Comfort Inn Newmarket": "Newmarket",
+  "Residence Inn by Marriott Whitby": "Whitby",
+  "Quality Suites Whitby": "Whitby",
+  "Motel 6 Whitby": "Whitby",
+  "Residence & Conference Centre - Toronto": "North York"
+};
+
+/** Infer a municipality from explicit city tokens in a canonical hotel name. */
+function inferAreaFromHotelName(name) {
+  const low = (name || "").toLowerCase();
+  const rules = [
+    ["richmond hill", "Richmond Hill"],
+    ["markham", "Markham"],
+    ["stouffville", "Markham"],
+    ["vaughan", "Vaughan"],
+    ["north york", "North York"],
+    ["scarborough", "Scarborough"],
+    ["toronto east", "Scarborough"],
+    ["pickering", "Pickering"],
+    ["ajax", "Ajax"],
+    ["oshawa", "Oshawa"],
+    ["whitby", "Whitby"],
+    ["aurora", "Aurora"],
+    ["newmarket", "Newmarket"],
+    ["brampton", "Brampton"],
+    ["oakville", "Oakville"],
+    ["burlington", "Burlington"],
+    ["caledon", "Caledon"],
+    ["mississauga", "Mississauga"],
+    ["airport", "Airport"],
+    ["downtown", "Downtown Toronto"]
+  ];
+  for (const [kw, area] of rules) {
+    if (low.includes(kw)) return area;
+  }
+  return null;
+}
+
+function pickSpecificTopArea(counts) {
+  const specific = Object.entries(counts || {}).filter(([k]) => k && k !== "Toronto / GTA");
+  if (!specific.length) return null;
+  specific.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  return specific[0][0];
+}
+
+/** Resolve a hotel's home municipality rather than taking its first multi-hotel tournament area. */
+function resolveHotelArea(name, singleAreas, allAreas) {
+  if (HOTEL_AREA_OVERRIDES[name]) return HOTEL_AREA_OVERRIDES[name];
+  return (
+    pickSpecificTopArea(singleAreas) ||
+    inferAreaFromHotelName(name) ||
+    pickSpecificTopArea(allAreas) ||
+    "Toronto / GTA"
+  );
+}
+
 const VERTICAL_RULES = [
   { label: "Tech / AI / Cyber", re: /\b(tech|ai|artificial intelligence|cyber|software|cloud|data|digital|devops|saas|it|developer|blockchain|crypto|web3|fintech|startup|innovation|security|robotics|quantum|analytics|machine learning|computing|iot|erp|crm|collision|elevate)\b/i },
   { label: "Finance / Real Estate", re: /\b(finance|financial|bank|banking|invest|investment|capital|wealth|equity|fund|hedge|real estate|reit|property|mortgage|insurance|accounting|tax|audit|actuar|treasury|pension|credit|venture|private markets|realtor|urban land|uli|boma)\b/i },
@@ -169,14 +238,21 @@ function normalizeHotelName(ev) {
   return HOTEL_ALIAS_MAP[raw.toLowerCase()] || raw;
 }
 
-/** Collapse Airport / West sub-labels into clean GTA corridors when corridor mode is active. */
+/** Collapse Airport sub-labels and Etobicoke when corridor mode is active; keep Markham/Richmond Hill/Vaughan separate. */
 function normalizeArea(areaRaw, mode) {
   const raw = (areaRaw || "Toronto / GTA").trim();
   if (mode === "raw") return raw;
   const low = raw.toLowerCase();
   if (low.includes("airport")) return "Airport Corridor";
-  if (low === "etobicoke") return "West Toronto";
+  if (low === "etobicoke" || low === "west toronto") return "West Toronto + Etobicoke";
   return raw;
+}
+
+/** Convert grouped region display labels into clean Demand Map search terms. */
+function areaMapSearchQuery(areaLabel) {
+  if (areaLabel === "Airport Corridor") return "Airport";
+  if (areaLabel === "West Toronto + Etobicoke") return "West Toronto";
+  return areaLabel;
 }
 
 function getEventDays(ev) {
@@ -279,12 +355,16 @@ function computeHotelRows() {
     const hotels = extractCanonicalHotels(ev);
     ev.__hotels = hotels;
     const y = (ev.start || "").slice(0, 4);
+    const evArea = (ev.area || "Toronto / GTA").trim();
+    const isSingleHotel = hotels.length === 1;
     hotels.forEach(canon => {
       let rec = byName.get(canon);
       if (!rec) {
-        rec = { name: canon, area: ev.area || "Toronto / GTA", y2025: 0, y2026: 0, y2027: 0, total: 0, cats: {} };
+        rec = { name: canon, singleAreas: {}, allAreas: {}, y2025: 0, y2026: 0, y2027: 0, total: 0, cats: {} };
         byName.set(canon, rec);
       }
+      if (isSingleHotel) rec.singleAreas[evArea] = (rec.singleAreas[evArea] || 0) + 1;
+      rec.allAreas[evArea] = (rec.allAreas[evArea] || 0) + 1;
       if (y === "2025") rec.y2025++;
       else if (y === "2026") rec.y2026++;
       else if (y === "2027") rec.y2027++;
@@ -298,7 +378,10 @@ function computeHotelRows() {
     .map((rec, idx) => {
       const rank = idx + 1;
       const tier = rank <= 10 ? "Top 10" : (rank <= 20 ? "Top 11-20" : "");
-      return finalizeHotelRow(rank, tier, rec);
+      return finalizeHotelRow(rank, tier, {
+        ...rec,
+        area: resolveHotelArea(rec.name, rec.singleAreas, rec.allAreas)
+      });
     });
 }
 
@@ -364,8 +447,8 @@ function populateKpis() {
 
   const bGroup = document.getElementById("bGroup");
   if (bGroup && bGroup.options.length >= 2) {
-    bGroup.options[0].text = `GTA corridors (${corrAreas.size} regions)`;
-    bGroup.options[1].text = `All exact areas (${rawAreas.size})`;
+    bGroup.options[0].text = `GTA corridors (Airport + West Toronto/Etobicoke · ${corrAreas.size} regions)`;
+    bGroup.options[1].text = `All exact areas (${rawAreas.size}, no grouping)`;
   }
 }
 
@@ -475,15 +558,17 @@ function renderCategoryBubbleView() {
 
   const areaMap = new Map();
   scoped.forEach(e => {
-    const areaName = normalizeArea(e.area, groupMode);
+    const rawArea = (e.area || "Toronto / GTA").trim();
+    const areaName = normalizeArea(rawArea, groupMode);
     let rec = areaMap.get(areaName);
     if (!rec) {
-      rec = { area: areaName, latSum: 0, lngSum: 0, total: 0, cats: {}, venues: {} };
+      rec = { area: areaName, latSum: 0, lngSum: 0, total: 0, cats: {}, venues: {}, rawAreas: {} };
       areaMap.set(areaName, rec);
     }
     rec.latSum += e.lat;
     rec.lngSum += e.lng;
     rec.total++;
+    rec.rawAreas[rawArea] = (rec.rawAreas[rawArea] || 0) + 1;
     rec.cats[e.cat] = (rec.cats[e.cat] || 0) + 1;
     rec.venues[e.venue] = (rec.venues[e.venue] || 0) + 1;
   });
@@ -501,6 +586,12 @@ function renderCategoryBubbleView() {
 
   const catLabel = activeBubbleCat === "ALL" ? "All 9 Categories" : CAT_LABELS[activeBubbleCat];
   document.getElementById("bMapTitle").textContent = `Regional Bubble Map: ${catLabel}`;
+  const bMapSubEl = document.getElementById("bMapSub");
+  if (bMapSubEl) {
+    bMapSubEl.textContent = groupMode === "corridor"
+      ? "Grouped mode merges only Airport sub-areas → Airport Corridor & Etobicoke + West Toronto · Markham, Richmond Hill & Vaughan stay separate"
+      : "Exact area mode: showing all individual event area labels with no grouping · Click any region bubble to inspect";
+  }
 
   if (selectedAreaKey && !areaMap.has(selectedAreaKey)) {
     selectedAreaKey = null;
@@ -702,7 +793,13 @@ function renderAreaInspector(areaObj) {
   titleEl.textContent = isAll
     ? `All Events — All GTA (${fmt(areaObj.total)} events)`
     : `${areaObj.area} (${fmt(areaObj.total)} events)`;
-  subEl.textContent = `Primary category: ${CAT_LABELS[areaObj.domCat]} (${Math.round((areaObj.domCnt / areaObj.total) * 100)}%)`;
+  const rawParts = !isAll && areaObj.rawAreas
+    ? Object.entries(areaObj.rawAreas).sort((a, b) => b[1] - a[1])
+    : [];
+  const groupedNote = rawParts.length > 1
+    ? ` · Grouped from ${rawParts.map(([k, n]) => `${k} (${fmt(n)})`).join(", ")}`
+    : "";
+  subEl.textContent = `Primary category: ${CAT_LABELS[areaObj.domCat]} (${Math.round((areaObj.domCnt / areaObj.total) * 100)}%)${groupedNote}`;
   if (clearBtn) clearBtn.style.display = isAll ? "none" : "";
   if (venuesTitleEl) venuesTitleEl.textContent = isAll ? "Top Venues (All GTA)" : "Top Venues in Region";
 
@@ -732,7 +829,7 @@ function renderAreaInspector(areaObj) {
 
   const mapHref = isAll
     ? "map.html?all=1"
-    : `map.html?q=${encodeURIComponent(areaObj.area === "Airport Corridor" ? "Airport" : areaObj.area)}&all=1`;
+    : `map.html?q=${encodeURIComponent(areaMapSearchQuery(areaObj.area))}&all=1`;
   const mapLabel = isAll ? "📍 View all events on Demand Map ↗" : "📍 View this region on Demand Map ↗";
   btnWrap.innerHTML = `<a class="btn-mini" style="width:100%;text-align:center;padding:8px 12px;" href="${mapHref}">${mapLabel}</a>`;
 }
