@@ -14,3 +14,5 @@ Thumbs.db
 *.zip
 .wrangler/
 deploy/
+
+events_consolidated_*.json

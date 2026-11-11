@@ -28,7 +28,7 @@
   <!-- Twitter / X Card -->
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:title" content="Hospitality Demand Map Toronto"/>
-  <meta name="twitter:description" content="Track event-driven hotel demand across Toronto and the GTA with interactive maps, attendance estimates, and driving proximity."/>
+  <meta name="twitter:description" content="Track event-driven hotel and hospitality demand across Toronto and the GTA with interactive maps, attendance estimates, and driving proximity."/>
   <meta name="twitter:image" content="https://hotelevent.pages.dev/og-image.png"/>
   
   <!-- SVG Favicon (Map Pin & Hotel Icon) -->
@@ -49,11 +49,11 @@
     <a class="nav-pill" href="analytics.html">📊 Analytics &amp; Deep Scan</a>
   </nav>
   <div class="totals">
-    <span class="pill"><b id="statEvents">2333</b> events</span>
-    <span class="pill"><b id="statVenues">236</b> venues</span>
-    <span class="pill"><b id="statHotels">1710</b> at hotel venues</span>
-    <span class="pill">Attendance published for <b id="statAtt">310</b> of <b id="statAttTotal">2333</b> events</span>
-    <span class="pill" aria-live="polite"><b id="visibleStat">595</b> in view</span>
+    <span class="pill"><b id="statEvents">3241</b> events</span>
+    <span class="pill"><b id="statVenues">363</b> venues</span>
+    <span class="pill"><b id="statHotels">2556</b> at hotel venues</span>
+    <span class="pill">Attendance published for <b id="statAtt">790</b> of <b id="statAttTotal">3241</b> events</span>
+    <span class="pill" aria-live="polite"><b id="visibleStat">883</b> in view</span>
     <span>Jan 1, 2025 – Dec 31, 2027 · Toronto &amp; GTA · one bubble per event</span>
   </div>
   <p class="note-inline">For hoteliers and hospitality professionals — revenue, sales and operations teams tracking event-driven demand across Toronto and the GTA. See which events are likely to drive hotel demand, spot high-demand dates, and find events hosted at hotels. Hover any bubble for an info tag with a link to the event source. Events at the same venue are spread in a small spiral so every bubble stays visible and clickable. Events tagged Historical already took place (Jan 2025 – Nov 2026) and their bubbles are shown muted.</p>
@@ -78,7 +78,7 @@
           </div>
           <p class="note" id="hotelStatus">Your hotel — tap the arrow &amp; pick a name, or the nearest hotel from the list. Distance &amp; estimated travel time will then show for every event.</p>
           <div>
-            <button type="button" class="toggle-btn" id="hotelToggle" aria-pressed="true">Hotel Event Only — ON · 1710 events</button>
+            <button type="button" class="toggle-btn" id="hotelToggle" aria-pressed="true">Hotel Event Only — ON · 2556 events</button>
           </div>
           <div>
             <label for="sortSel">Sort event list</label>
@@ -113,14 +113,14 @@
             <span><span class="c" style="width:22px;height:22px"></span><br>~5,000</span>
             <span><span class="c" style="width:34px;height:34px"></span><br>30,000+</span>
           </div>
-          <p style="margin:7px 0 0"><span class="c hollow" style="width:14px;height:14px"></span> Hollow bubble = attendance not published (<span id="statHollow">2023 of 2333</span> events).</p>
-          <p style="margin:5px 0 0"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#2563eb;opacity:.35;border:2px solid #6b7280;vertical-align:-1px"></span><b>Historical</b> — muted bubble with a grey outline (<span id="statHist">1613</span> events, Jan 2025 – Nov 2026).</p>
+          <p style="margin:7px 0 0"><span class="c hollow" style="width:14px;height:14px"></span> Hollow bubble = attendance not published (<span id="statHollow">2451 of 3241</span> events).</p>
+          <p style="margin:5px 0 0"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#2563eb;opacity:.35;border:2px solid #6b7280;vertical-align:-1px"></span><b>Historical</b> — muted bubble with a grey outline (<span id="statHist">2200</span> events, Jan 2025 – Nov 2026).</p>
           <p style="margin:5px 0 0"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f97316;border:2px solid #fff;box-shadow:0 0 0 1.5px #111827;vertical-align:-1px"></span><b>Selected event</b> — orange, larger, and shown on top of all other bubbles.</p>
         </div>
       </div>
     </div>
     <ol class="evlist" id="evlist"></ol>
-    <p class="note">Hotel venue = the dataset marks the venue as a hotel (venue_type “hotel” or “mixed”) — <span id="statHotelNote">1710</span> events. The hotel name is shown on those events. Events without a published attendance figure are hidden once the minimum-attendees slider is above 0.</p>
+    <p class="note">Hotel venue = the dataset marks the venue as a hotel (venue_type “hotel” or “mixed”) — <span id="statHotelNote">2556</span> events. The hotel name is shown on those events. Events without a published attendance figure are hidden once the minimum-attendees slider is above 0.</p>
   </aside>
   <button type="button" class="side-arrow" id="sideArrowBtn" aria-expanded="true" aria-label="Collapse filter sidebar" title="Collapse the filter sidebar">
     <span class="side-arrow-chev" aria-hidden="true"></span>
@@ -174,7 +174,7 @@
   </div>
 </div>
 <footer>
-  Data as of Nov 10, 2026 (America/Toronto)
+  Data as of Nov 11, 2026 (America/Toronto)
   <div class="copyright">© 2026 <a href="https://www.linkedin.com/in/minhcong/" target="_blank" rel="noopener">Minh Cong Nguyen</a></div>
 </footer>
 <script src="app.js"></script>

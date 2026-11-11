@@ -66,6 +66,7 @@ const HOTEL_ALIAS_MAP = {
   "delta hotels toronto": "Delta Hotels by Marriott Toronto",
   "toronto airport marriott, 901 dixon road": "Toronto Airport Marriott Hotel",
   "hilton mississauga meadowvale": "Hilton Mississauga/Meadowvale",
+  "hilton garden inn toronto mississauga": "Hilton Garden Inn Toronto/Mississauga",
   "crowne plaza toronto - north york": "Crowne Plaza Toronto – North York",
   "pan pacific toronto": "Crowne Plaza Toronto – North York",
   "four seasons hotel toronto, yorkville": "Four Seasons Hotel Toronto",
@@ -253,24 +254,42 @@ function initDashboard() {
   }
 }
 
+/** Return category keys sorted descending (largest -> smallest) by count. */
+function sortedCategories(counts) {
+  return [...CAT_KEYS].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+}
+
+/** Extract unique canonical hotel names from an event's hn/venue field. */
+function extractCanonicalHotels(ev) {
+  const out = new Set();
+  String(ev.hn || ev.venue || "").split(";").forEach(part => {
+    const raw = part.trim();
+    if (!raw) return;
+    out.add(HOTEL_ALIAS_MAP[raw.toLowerCase()] || raw);
+  });
+  return Array.from(out);
+}
+
 /** Build canonical Top 40 + Extended hotel aggregations directly from EVENTS. */
 function computeHotelRows() {
   const byName = new Map();
   EVENTS.forEach(ev => {
     if (!ev.hotel) return;
-    const canon = normalizeHotelName(ev);
-    if (!canon) return;
-    let rec = byName.get(canon);
-    if (!rec) {
-      rec = { name: canon, area: ev.area || "Toronto / GTA", y2025: 0, y2026: 0, y2027: 0, total: 0, cats: {} };
-      byName.set(canon, rec);
-    }
+    const hotels = extractCanonicalHotels(ev);
+    ev.__hotels = hotels;
     const y = (ev.start || "").slice(0, 4);
-    if (y === "2025") rec.y2025++;
-    else if (y === "2026") rec.y2026++;
-    else if (y === "2027") rec.y2027++;
-    rec.total++;
-    rec.cats[ev.cat] = (rec.cats[ev.cat] || 0) + 1;
+    hotels.forEach(canon => {
+      let rec = byName.get(canon);
+      if (!rec) {
+        rec = { name: canon, area: ev.area || "Toronto / GTA", y2025: 0, y2026: 0, y2027: 0, total: 0, cats: {} };
+        byName.set(canon, rec);
+      }
+      if (y === "2025") rec.y2025++;
+      else if (y === "2026") rec.y2026++;
+      else if (y === "2027") rec.y2027++;
+      rec.total++;
+      rec.cats[ev.cat] = (rec.cats[ev.cat] || 0) + 1;
+    });
   });
 
   HOTEL_ROWS = Array.from(byName.values())
@@ -298,14 +317,19 @@ function populateKpis() {
   const total = EVENTS.length;
   const hotelEvents = EVENTS.filter(e => e.hotel);
   const nonHotelEvents = EVENTS.filter(e => !e.hotel);
-  const top40Sum = HOTEL_ROWS.filter(h => h.rank <= 40).reduce((s, h) => s + h.total, 0);
+  const top40Set = new Set(HOTEL_ROWS.filter(h => h.rank <= 40).map(h => h.name));
+  const top40Covered = hotelEvents.filter(e => (e.__hotels || []).some(h => top40Set.has(h))).length;
   let multiDay = 0, multiHotel = 0, multiNon = 0;
   const venues = new Set();
   const domains = new Set();
+  const corrAreas = new Set();
+  const rawAreas = new Set();
   let urlCount = 0;
 
   EVENTS.forEach(e => {
     venues.add(e.venue);
+    corrAreas.add(normalizeArea(e.area, "corridor"));
+    rawAreas.add(normalizeArea(e.area, "raw"));
     const days = getEventDays(e);
     if (days >= 2) {
       multiDay++;
@@ -320,12 +344,12 @@ function populateKpis() {
   });
 
   const pct = n => total ? ((n / total) * 100).toFixed(1) : "0";
-  const pct40 = hotelEvents.length ? ((top40Sum / hotelEvents.length) * 100).toFixed(1) : "0";
+  const pct40 = hotelEvents.length ? ((top40Covered / hotelEvents.length) * 100).toFixed(1) : "0";
 
   document.getElementById("kpiTotal").textContent = fmt(total);
   document.getElementById("kpiTotalSub").textContent = `${fmt(venues.size)} venues · 2025–2027`;
   document.getElementById("kpiHotel").innerHTML = `${fmt(hotelEvents.length)} <small>(${pct(hotelEvents.length)}%)</small>`;
-  document.getElementById("kpiHotelSub").textContent = `Top 40 capture ${fmt(top40Sum)} (${pct40}%)`;
+  document.getElementById("kpiHotelSub").textContent = `Top 40 capture ${fmt(top40Covered)} (${pct40}%)`;
   document.getElementById("kpiNonHotel").innerHTML = `${fmt(nonHotelEvents.length)} <small>(${pct(nonHotelEvents.length)}%)</small>`;
   document.getElementById("kpiNonHotelSub").textContent = `Citywide & public major venues`;
   document.getElementById("kpiMultiDay").innerHTML = `${fmt(multiDay)} <small>(${pct(multiDay)}%)</small>`;
@@ -336,6 +360,12 @@ function populateKpis() {
   document.getElementById("tabBtn-explorer").textContent = `4. Event Explorer (${fmt(total)})`;
   const extBtn = document.getElementById("hTier-EXT");
   if (extBtn) extBtn.textContent = `All Hotels (${HOTEL_ROWS.length})`;
+
+  const bGroup = document.getElementById("bGroup");
+  if (bGroup && bGroup.options.length >= 2) {
+    bGroup.options[0].text = `GTA corridors (${corrAreas.size} regions)`;
+    bGroup.options[1].text = `All exact areas (${rawAreas.size})`;
+  }
 }
 
 /** Switch sub-tabs cleanly and resize charts/map when their container becomes visible. */
@@ -391,16 +421,22 @@ function activateCatFallback() {
   renderCategoryBubbleView();
 }
 
-function renderBubbleControls() {
+function renderBubbleControls(countsOverride) {
   const wrap = document.getElementById("bCatChips");
-  const counts = {};
-  EVENTS.forEach(e => { counts[e.cat] = (counts[e.cat] || 0) + 1; });
+  const counts = countsOverride || {};
+  let total = 0;
+  if (!countsOverride) {
+    EVENTS.forEach(e => { counts[e.cat] = (counts[e.cat] || 0) + 1; });
+    total = EVENTS.length;
+  } else {
+    Object.values(counts).forEach(n => { total += n; });
+  }
 
   const allBtn = `<button type="button" class="chip ${activeBubbleCat === "ALL" ? "active" : ""}" data-bcat="ALL" onclick="selectBubbleCat('ALL')">
-    All Categories <span class="cnt">${fmt(EVENTS.length)}</span>
+    All Categories <span class="cnt">${fmt(total)}</span>
   </button>`;
 
-  const catBtns = CAT_KEYS.map(c => `<button type="button" class="chip ${activeBubbleCat === c ? "active" : ""}" data-bcat="${c}" onclick="selectBubbleCat('${c}')">
+  const catBtns = sortedCategories(counts).map(c => `<button type="button" class="chip ${activeBubbleCat === c ? "active" : ""}" data-bcat="${c}" onclick="selectBubbleCat('${c}')">
     <span class="dot" style="background:${CAT_COLORS[c]}"></span>
     ${esc(CAT_SHORT[c])}
     <span class="cnt">${fmt(counts[c] || 0)}</span>
@@ -434,11 +470,7 @@ function renderCategoryBubbleView() {
 
   const catTotals = {};
   scoped.forEach(e => { catTotals[e.cat] = (catTotals[e.cat] || 0) + 1; });
-  document.querySelectorAll("#bCatChips .chip").forEach(btn => {
-    const c = btn.dataset.bcat;
-    const cntEl = btn.querySelector(".cnt");
-    if (cntEl) cntEl.textContent = fmt(c === "ALL" ? scoped.length : (catTotals[c] || 0));
-  });
+  renderBubbleControls(catTotals);
 
   const areaMap = new Map();
   scoped.forEach(e => {
@@ -577,7 +609,7 @@ function renderCatLeafletBubbles(areas, dispMode) {
 
 function renderCatFallbackSvg(areas, dispMode) {
   const svg = document.getElementById("catFallbackSvg");
-  const W = 860, H = 560, lngMin = -79.88, lngMax = -78.78, latMin = 43.30, latMax = 44.08;
+  const W = 860, H = 560, lngMin = -80.10, lngMax = -78.75, latMin = 43.15, latMax = 44.10;
   const x = lng => ((lng - lngMin) / (lngMax - lngMin)) * W;
   const y = lat => ((latMax - lat) / (latMax - latMin)) * H;
 
@@ -658,17 +690,22 @@ function renderAreaInspector(areaObj) {
 }
 
 function renderAreaCategoryBubbleMatrix(areas) {
-  const topAreas = areas.filter(a => a.total > 0).slice(0, 12);
+  const topAreas = areas.filter(a => a.total > 0).sort((a, b) => b.total - a.total).slice(0, 12);
+  const catScopeTotals = {};
+  areas.forEach(a => CAT_KEYS.forEach(c => {
+    catScopeTotals[c] = (catScopeTotals[c] || 0) + (a.cats[c] || 0);
+  }));
+  const orderedCats = sortedCategories(catScopeTotals);
   const yLabels = topAreas.map(a => a.area);
-  const xLabels = CAT_KEYS.map(c => CAT_SHORT[c]);
+  const xLabels = orderedCats.map(c => CAT_SHORT[c]);
 
   let maxCell = 1;
-  topAreas.forEach(a => CAT_KEYS.forEach(c => {
+  topAreas.forEach(a => orderedCats.forEach(c => {
     const n = a.cats[c] || 0;
     if (n > maxCell) maxCell = n;
   }));
 
-  const datasets = CAT_KEYS.map((c, xi) => {
+  const datasets = orderedCats.map((c, xi) => {
     const pts = [];
     topAreas.forEach((a, yi) => {
       const cnt = a.cats[c] || 0;
@@ -743,8 +780,12 @@ function renderAreaCategoryBubbleMatrix(areas) {
 
 function renderCategoryLeaderCards(areas, scopeTotal) {
   const grid = document.getElementById("catLeadersGrid");
-  grid.innerHTML = CAT_KEYS.map(c => {
-    const catTotal = areas.reduce((s, a) => s + (a.cats[c] || 0), 0);
+  const catScopeTotals = {};
+  areas.forEach(a => CAT_KEYS.forEach(c => {
+    catScopeTotals[c] = (catScopeTotals[c] || 0) + (a.cats[c] || 0);
+  }));
+  grid.innerHTML = sortedCategories(catScopeTotals).map(c => {
+    const catTotal = catScopeTotals[c] || 0;
     const ranked = areas
       .filter(a => (a.cats[c] || 0) > 0)
       .sort((a, b) => (b.cats[c] || 0) - (a.cats[c] || 0))
@@ -915,15 +956,16 @@ function renderDeepAnalytics() {
     }
   });
 
+  const orderedCats = sortedCategories(catCounts);
   document.getElementById("catChartSub").textContent = `Total n = ${fmt(EVENTS.length)} events`;
   if (charts.category) charts.category.destroy();
   charts.category = new Chart(document.getElementById("categoryChart"), {
     type: "doughnut",
     data: {
-      labels: CAT_KEYS.map(c => `${CAT_SHORT[c]} (${fmt(catCounts[c] || 0)})`),
+      labels: orderedCats.map(c => `${CAT_SHORT[c]} (${fmt(catCounts[c] || 0)})`),
       datasets: [{
-        data: CAT_KEYS.map(c => catCounts[c] || 0),
-        backgroundColor: CAT_KEYS.map(c => CAT_COLORS[c]),
+        data: orderedCats.map(c => catCounts[c] || 0),
+        backgroundColor: orderedCats.map(c => CAT_COLORS[c]),
         borderWidth: 1,
         borderColor: "transparent"
       }]
@@ -1062,6 +1104,7 @@ function renderDurationBreakdown() {
   document.getElementById("durationSummary").textContent =
     `${((multiTot / tot) * 100).toFixed(1)}% span ≥2 days (${fmt(multiH)} in-hotel, ${fmt(multiNH)} citywide)`;
 
+  buckets.sort((a, b) => b.count - a.count);
   document.getElementById("durationBars").innerHTML = buckets.map(b => {
     const pct = ((b.count / tot) * 100).toFixed(1);
     return `<div class="bar-row">
@@ -1102,7 +1145,7 @@ function populateExplorerFilters() {
 
   document.getElementById("expCat").innerHTML =
     `<option value="ALL">All Categories (${CAT_KEYS.length})</option>` +
-    CAT_KEYS.map(c => `<option value="${c}">${esc(CAT_SHORT[c])} (${fmt(catCounts[c] || 0)})</option>`).join("");
+    sortedCategories(catCounts).map(c => `<option value="${c}">${esc(CAT_SHORT[c])} (${fmt(catCounts[c] || 0)})</option>`).join("");
 
   document.getElementById("expArea").innerHTML =
     `<option value="ALL">All Areas (${Object.keys(areaCounts).length})</option>` +
