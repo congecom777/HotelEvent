@@ -686,7 +686,7 @@ function renderAreaInspector(areaObj) {
   ).join("");
 
   const searchQ = encodeURIComponent(areaObj.area === "Airport Corridor" ? "Airport" : areaObj.area);
-  btnWrap.innerHTML = `<a class="btn-mini" style="width:100%;text-align:center;padding:8px 12px;" href="index.html?q=${searchQ}&all=1">📍 View this region on Demand Map ↗</a>`;
+  btnWrap.innerHTML = `<a class="btn-mini" style="width:100%;text-align:center;padding:8px 12px;" href="map.html?q=${searchQ}&all=1">📍 View this region on Demand Map ↗</a>`;
 }
 
 function renderAreaCategoryBubbleMatrix(areas) {
@@ -884,7 +884,7 @@ window.renderHotelsTable = function () {
       <td>
         <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--blue)"></div></div>
       </td>
-      <td class="center"><a class="btn-mini" href="index.html?q=${shortQ}&all=1">📍 Map</a></td>
+      <td class="center"><a class="btn-mini" href="map.html?q=${shortQ}&all=1">📍 Map</a></td>
     </tr>`;
   }).join("");
 };
@@ -1228,7 +1228,7 @@ function renderExplorerPageOnly() {
       <td><span class="cat-pill" style="background:${CAT_COLORS[ev.cat] || "#475569"}">${esc(CAT_SHORT[ev.cat] || ev.cat)}</span></td>
       <td class="num" style="font-family:ui-monospace,monospace;">${esc(getAttendeeDisplay(ev))}</td>
       <td class="center">${linkHtml}</td>
-      <td class="center"><a class="btn-mini" href="index.html?q=${qMap}&all=1">📍 Map</a></td>
+      <td class="center"><a class="btn-mini" href="map.html?q=${qMap}&all=1">📍 Map</a></td>
     </tr>`;
   }).join("");
 }
