@@ -142,12 +142,15 @@
 
         <aside class="card inspector-card" id="areaInspector">
           <div>
-            <h3 class="card-title" id="inspAreaTitle">Select a region on the map</h3>
-            <p class="card-sub" id="inspAreaSub">Category share &amp; leading venues</p>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+              <h3 class="card-title" id="inspAreaTitle">All Events</h3>
+              <button type="button" class="btn-mini" id="inspClearBtn" style="display:none;flex-shrink:0;" onclick="clearAreaSelection()">Show all ✕</button>
+            </div>
+            <p class="card-sub" id="inspAreaSub">Category share &amp; leading venues across GTA</p>
           </div>
           <div id="inspBars" style="display:flex;flex-direction:column;gap:8px;"></div>
           <div style="border-top:1px solid var(--line);padding-top:10px;">
-            <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Top Venues in Region</div>
+            <div id="inspVenuesTitle" style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Top Venues (All GTA)</div>
             <div id="inspVenues" style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;"></div>
           </div>
           <div id="inspMapBtnWrap" style="margin-top:auto;padding-top:8px;"></div>

@@ -94,6 +94,7 @@ let hotelSort = { key: "total", dir: "desc" };
 let explorerSort = { key: "start", dir: "asc" };
 let activeBubbleCat = "ALL";
 let selectedAreaKey = null;
+let bubbleRenderCtx = null;
 let explorerPage = 1;
 const PAGE_SIZE = 100;
 
@@ -490,10 +491,7 @@ function renderCategoryBubbleView() {
   const areas = Array.from(areaMap.values()).map(r => {
     const lat = r.latSum / r.total;
     const lng = r.lngSum / r.total;
-    let domCat = "conference", domCnt = -1;
-    Object.entries(r.cats).forEach(([c, n]) => {
-      if (n > domCnt) { domCnt = n; domCat = c; }
-    });
+    const { domCat, domCnt } = getDominantCategory(r.cats);
     const activeCount = activeBubbleCat === "ALL" ? r.total : (r.cats[activeBubbleCat] || 0);
     return { ...r, lat, lng, domCat, domCnt, activeCount };
   }).sort((a, b) => b.activeCount - a.activeCount || b.total - a.total);
@@ -504,20 +502,65 @@ function renderCategoryBubbleView() {
   const catLabel = activeBubbleCat === "ALL" ? "All 9 Categories" : CAT_LABELS[activeBubbleCat];
   document.getElementById("bMapTitle").textContent = `Regional Bubble Map: ${catLabel}`;
 
-  if (!selectedAreaKey || !areaMap.has(selectedAreaKey)) {
-    selectedAreaKey = areas.length ? areas[0].area : null;
+  if (selectedAreaKey && !areaMap.has(selectedAreaKey)) {
+    selectedAreaKey = null;
   }
 
+  bubbleRenderCtx = { areas, dispMode, scoped };
+  syncBubbleSelectionUI();
+  renderAreaCategoryBubbleMatrix(areas);
+  renderCategoryLeaderCards(areas, scoped.length);
+}
+
+/** Return the category key with the largest event count in a category map. */
+function getDominantCategory(cats) {
+  let domCat = "conference", domCnt = -1;
+  Object.entries(cats).forEach(([c, n]) => {
+    if (n > domCnt) { domCnt = n; domCat = c; }
+  });
+  return { domCat, domCnt: Math.max(0, domCnt) };
+}
+
+/** Build an aggregate summary across all events in the current filter scope. */
+function buildAllAreasSummary(scoped) {
+  if (!scoped.length) return null;
+  const cats = {}, venues = {};
+  scoped.forEach(e => {
+    cats[e.cat] = (cats[e.cat] || 0) + 1;
+    venues[e.venue] = (venues[e.venue] || 0) + 1;
+  });
+  const { domCat, domCnt } = getDominantCategory(cats);
+  return { area: "All Regions (GTA)", total: scoped.length, cats, venues, domCat, domCnt, isAll: true };
+}
+
+/** Sync bubble highlight state and right-side inspector panel. */
+function syncBubbleSelectionUI() {
+  if (!bubbleRenderCtx) return;
+  const { areas, dispMode, scoped } = bubbleRenderCtx;
   if (catFallbackActive) {
     renderCatFallbackSvg(areas, dispMode);
   } else {
     renderCatLeafletBubbles(areas, dispMode);
   }
-
-  renderAreaInspector(areas.find(a => a.area === selectedAreaKey) || areas[0]);
-  renderAreaCategoryBubbleMatrix(areas);
-  renderCategoryLeaderCards(areas, scoped.length);
+  const activeObj = selectedAreaKey
+    ? (areas.find(a => a.area === selectedAreaKey) || buildAllAreasSummary(scoped))
+    : buildAllAreasSummary(scoped);
+  renderAreaInspector(activeObj);
 }
+
+/** Toggle a region bubble: click once to inspect it, click again to show all events. */
+function toggleAreaSelection(areaName) {
+  selectedAreaKey = selectedAreaKey === areaName ? null : areaName;
+  syncBubbleSelectionUI();
+}
+
+/** Clear region selection and restore the All Events inspector summary. */
+function clearAreaSelection() {
+  if (!selectedAreaKey) return;
+  selectedAreaKey = null;
+  syncBubbleSelectionUI();
+}
+window.clearAreaSelection = clearAreaSelection;
 
 function bubblePixelSize(count, maxCount, minPx, maxPx) {
   if (count <= 0) return 0;
@@ -536,16 +579,16 @@ function renderCatLeafletBubbles(areas, dispMode) {
     nonZero.forEach(a => Object.values(a.cats).forEach(v => { if (v > maxCat) maxCat = v; }));
     nonZero.forEach(a => {
       const entries = Object.entries(a.cats).sort((x, y) => y[1] - x[1]);
+      const isSel = a.area === selectedAreaKey;
       L.marker([a.lat, a.lng], {
         icon: L.divIcon({
           className: "area-bubble-icon",
-          html: `<div class="area-bubble-lbl" style="position:static;transform:translate(-50%,-50%);font-size:11px;">${esc(a.area)} (${fmt(a.total)})</div>`,
+          html: `<div class="area-bubble-lbl" style="position:static;transform:translate(-50%,-50%);font-size:11px;${isSel ? "outline:2px solid #111827;" : ""}">${esc(a.area)} (${fmt(a.total)})</div>`,
           iconSize: [0, 0]
         }),
         interactive: true
       }).on("click", () => {
-        selectedAreaKey = a.area;
-        renderAreaInspector(a);
+        toggleAreaSelection(a.area);
       }).addTo(catLayer);
 
       entries.forEach(([cat, cnt], idx) => {
@@ -557,14 +600,13 @@ function renderCatLeafletBubbles(areas, dispMode) {
         const marker = L.marker([latOff, lngOff], {
           icon: L.divIcon({
             className: "area-bubble-icon",
-            html: `<div class="area-bubble-wrap" style="width:${size}px;height:${size}px;background:${CAT_COLORS[cat]};font-size:${size < 28 ? 10 : 12}px;opacity:0.92;">${fmt(cnt)}</div>`,
+            html: `<div class="area-bubble-wrap ${isSel ? "selected" : ""}" style="width:${size}px;height:${size}px;background:${CAT_COLORS[cat]};font-size:${size < 28 ? 10 : 12}px;opacity:0.92;">${fmt(cnt)}</div>`,
             iconSize: [0, 0]
           })
         });
-        marker.bindTooltip(`<b>${esc(a.area)}</b><br>${esc(CAT_LABELS[cat])}: <b>${fmt(cnt)}</b> (${((cnt / a.total) * 100).toFixed(1)}%)`);
+        marker.bindTooltip(`<b>${esc(a.area)}</b><br>${esc(CAT_LABELS[cat])}: <b>${fmt(cnt)}</b> (${((cnt / a.total) * 100).toFixed(1)}%)<br><small>${isSel ? "Click again to show all events" : "Click to inspect region"}</small>`);
         marker.on("click", () => {
-          selectedAreaKey = a.area;
-          renderAreaInspector(a);
+          toggleAreaSelection(a.area);
         });
         marker.addTo(catLayer);
       });
@@ -595,13 +637,11 @@ function renderCatLeafletBubbles(areas, dispMode) {
     marker.bindTooltip(
       `<b>${esc(a.area)}</b><br>` +
       `${activeBubbleCat === "ALL" ? "Total" : esc(CAT_SHORT[activeBubbleCat])}: <b>${fmt(a.activeCount)}</b> events (${esc(share)})` +
-      `<br><small>Click to inspect category mix</small>`,
+      `<br><small>${isSel ? "Click again to show all events" : "Click to inspect category mix"}</small>`,
       { direction: "top", offset: [0, -10] }
     );
     marker.on("click", () => {
-      selectedAreaKey = a.area;
-      renderCatLeafletBubbles(areas, dispMode);
-      renderAreaInspector(a);
+      toggleAreaSelection(a.area);
     });
     marker.addTo(catLayer);
   });
@@ -635,16 +675,14 @@ function renderCatFallbackSvg(areas, dispMode) {
   });
 
   svg.innerHTML = out.join("");
-  window.__selectFallbackArea = areaName => {
-    selectedAreaKey = areaName;
-    renderCatFallbackSvg(areas, dispMode);
-    renderAreaInspector(areas.find(x => x.area === areaName));
-  };
+  window.__selectFallbackArea = areaName => toggleAreaSelection(areaName);
 }
 
 function renderAreaInspector(areaObj) {
   const titleEl = document.getElementById("inspAreaTitle");
   const subEl = document.getElementById("inspAreaSub");
+  const clearBtn = document.getElementById("inspClearBtn");
+  const venuesTitleEl = document.getElementById("inspVenuesTitle");
   const barsEl = document.getElementById("inspBars");
   const venuesEl = document.getElementById("inspVenues");
   const btnWrap = document.getElementById("inspMapBtnWrap");
@@ -652,14 +690,21 @@ function renderAreaInspector(areaObj) {
   if (!areaObj) {
     titleEl.textContent = "No events match current filters";
     subEl.textContent = "Adjust year or category filter";
+    if (clearBtn) clearBtn.style.display = "none";
+    if (venuesTitleEl) venuesTitleEl.textContent = "Top Venues";
     barsEl.innerHTML = "";
     venuesEl.innerHTML = "";
     btnWrap.innerHTML = "";
     return;
   }
 
-  titleEl.textContent = `${areaObj.area} (${fmt(areaObj.total)} events)`;
+  const isAll = Boolean(areaObj.isAll);
+  titleEl.textContent = isAll
+    ? `All Events — All GTA (${fmt(areaObj.total)} events)`
+    : `${areaObj.area} (${fmt(areaObj.total)} events)`;
   subEl.textContent = `Primary category: ${CAT_LABELS[areaObj.domCat]} (${Math.round((areaObj.domCnt / areaObj.total) * 100)}%)`;
+  if (clearBtn) clearBtn.style.display = isAll ? "none" : "";
+  if (venuesTitleEl) venuesTitleEl.textContent = isAll ? "Top Venues (All GTA)" : "Top Venues in Region";
 
   const catEntries = Object.entries(areaObj.cats).sort((a, b) => b[1] - a[1]);
   barsEl.innerHTML = catEntries.map(([c, cnt]) => {
@@ -685,8 +730,11 @@ function renderAreaInspector(areaObj) {
     </div>`
   ).join("");
 
-  const searchQ = encodeURIComponent(areaObj.area === "Airport Corridor" ? "Airport" : areaObj.area);
-  btnWrap.innerHTML = `<a class="btn-mini" style="width:100%;text-align:center;padding:8px 12px;" href="map.html?q=${searchQ}&all=1">📍 View this region on Demand Map ↗</a>`;
+  const mapHref = isAll
+    ? "map.html?all=1"
+    : `map.html?q=${encodeURIComponent(areaObj.area === "Airport Corridor" ? "Airport" : areaObj.area)}&all=1`;
+  const mapLabel = isAll ? "📍 View all events on Demand Map ↗" : "📍 View this region on Demand Map ↗";
+  btnWrap.innerHTML = `<a class="btn-mini" style="width:100%;text-align:center;padding:8px 12px;" href="${mapHref}">${mapLabel}</a>`;
 }
 
 function renderAreaCategoryBubbleMatrix(areas) {
