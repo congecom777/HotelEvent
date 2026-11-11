@@ -2,7 +2,8 @@
 
 An interactive cartographic platform tracking event-driven hospitality demand across Toronto and the Greater Toronto Area (GTA) for hoteliers, revenue managers, and sales teams.
 
-Live demo: [https://hotelevent.pages.dev/](https://hotelevent.pages.dev/)
+Live site (GitHub Pages): [https://congecom777.github.io/HotelEvent/](https://congecom777.github.io/HotelEvent/)  
+Backup mirror (Cloudflare Pages): [https://hotelevent.pages.dev/](https://hotelevent.pages.dev/)
 
 ---
 
@@ -13,17 +14,21 @@ The project decouples frontend application logic from dataset storage, allowing 
 ```text
 HotelEvent/
 │
-├── index.html              # Lightweight HTML shell
-├── style.css               # Application stylesheets & themes
-├── app.js                  # Map rendering, Leaflet interactions & filter logic
+├── index.html              # Analytics & Deep Scan dashboard (main page)
+├── analytics.css           # Analytics dashboard stylesheets & themes
+├── analytics.js            # Regional bubble map, Top Hotels, Deep Analytics & Explorer
+├── map.html                # Interactive Demand Map
+├── style.css               # Demand Map stylesheets & themes
+├── app.js                  # Demand Map rendering, Leaflet interactions & routing
 ├── og-image.png            # Social sharing preview image (1200x673)
 │
 ├── data/
-│   ├── events.json         # Master event database (1,790+ events)
+│   ├── events.json         # Master event database (3,241+ events)
 │   └── README.md           # Database guide & schema documentation
 │
-├── robots.txt              # AI crawler & search engine policy
-└── _headers                # Cloudflare response headers
+├── .nojekyll               # Bypass Jekyll processing on GitHub Pages
+├── .github/workflows/      # GitHub Pages automated deployment workflow
+└── robots.txt              # AI crawler & search engine policy
 ```
 
 ---
