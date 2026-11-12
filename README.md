@@ -23,7 +23,7 @@ HotelEvent/
 ├── og-image.png            # Social sharing preview image (1200x673)
 │
 ├── data/
-│   ├── events.json         # Master event database (3,241+ events)
+│   ├── events.json         # Master event database (4,180+ events)
 │   └── README.md           # Database guide & schema documentation
 │
 ├── .nojekyll               # Bypass Jekyll processing on GitHub Pages
