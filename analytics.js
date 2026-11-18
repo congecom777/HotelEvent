@@ -316,12 +316,28 @@ function initDashboard() {
   renderExplorer();
 
   document.getElementById("bYear").addEventListener("change", renderCategoryBubbleView);
-  document.getElementById("bHotel").addEventListener("change", renderCategoryBubbleView);
+  document.getElementById("bHotel").addEventListener("change", () => {
+    const bModeEl = document.getElementById("bMode");
+    const bHotelEl = document.getElementById("bHotel");
+    if (bModeEl && bModeEl.value === "hotel" && bHotelEl.value === "0") {
+      bModeEl.value = "area";
+      selectedAreaKey = null;
+    }
+    renderCategoryBubbleView();
+  });
   document.getElementById("bGroup").addEventListener("change", () => {
     selectedAreaKey = null;
     renderCategoryBubbleView();
   });
-  document.getElementById("bMode").addEventListener("change", renderCategoryBubbleView);
+  document.getElementById("bMode").addEventListener("change", () => {
+    const mode = document.getElementById("bMode").value;
+    const bHotelEl = document.getElementById("bHotel");
+    if (mode === "hotel" && bHotelEl && bHotelEl.value === "0") {
+      bHotelEl.value = "1";
+    }
+    selectedAreaKey = null;
+    renderCategoryBubbleView();
+  });
 
   if (window.location.hash) {
     const target = window.location.hash.replace("#", "");
@@ -547,10 +563,47 @@ function getBubbleScopeEvents() {
   });
 }
 
+function shortHotelBubbleLabel(name) {
+  let s = String(name || "").split(",")[0].trim();
+  s = s
+    .replace(/\bConference Centre\b/gi, "Conf.")
+    .replace(/\bHotel\s*&\s*Suites\b/gi, "")
+    .replace(/\bSuites\s*&\s*Spa\b/gi, "")
+    .replace(/\bHotel\b/gi, "")
+    .replace(/\bby Marriott\b/gi, "")
+    .replace(/\bby Hilton\b/gi, "")
+    .replace(/\bToronto Airport\b/gi, "Airport")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (s.length > 24) s = s.slice(0, 22).trim() + "…";
+  return s || name;
+}
+
 function renderCategoryBubbleView() {
   const scoped = getBubbleScopeEvents();
-  const groupMode = document.getElementById("bGroup").value;
+  const groupSel = document.getElementById("bGroup");
+  const groupMode = groupSel.value;
   const dispMode = document.getElementById("bMode").value;
+
+  if (groupSel) {
+    groupSel.disabled = dispMode === "hotel";
+    groupSel.style.opacity = dispMode === "hotel" ? "0.55" : "";
+  }
+
+  /* ---- Hotel bubble mode ---- */
+  if (dispMode === "hotel") {
+    renderHotelBubbleMode(scoped);
+    return;
+  }
+
+  const mTitle = document.getElementById("bMatrixTitle");
+  const mSub = document.getElementById("bMatrixSub");
+  const lTitle = document.getElementById("bLeadersTitle");
+  const lSub = document.getElementById("bLeadersSub");
+  if (mTitle) mTitle.textContent = "Area × Category Concentration Bubble Matrix";
+  if (mSub) mSub.textContent = "Compare at a glance which GTA regions drive each event category (bubble area ∝ event count)";
+  if (lTitle) lTitle.textContent = "Top Regions by Category";
+  if (lSub) lSub.textContent = "Leading GTA areas for each segment under active filters · Click any card to focus on the map";
 
   const catTotals = {};
   scoped.forEach(e => { catTotals[e.cat] = (catTotals[e.cat] || 0) + 1; });
@@ -578,7 +631,7 @@ function renderCategoryBubbleView() {
     const lng = r.lngSum / r.total;
     const { domCat, domCnt } = getDominantCategory(r.cats);
     const activeCount = activeBubbleCat === "ALL" ? r.total : (r.cats[activeBubbleCat] || 0);
-    return { ...r, lat, lng, domCat, domCnt, activeCount };
+    return { ...r, key: r.area, lat, lng, domCat, domCnt, activeCount, isHotelBubble: false };
   }).sort((a, b) => b.activeCount - a.activeCount || b.total - a.total);
 
   const totalDisplayed = areas.reduce((s, a) => s + a.activeCount, 0);
@@ -603,6 +656,113 @@ function renderCategoryBubbleView() {
   renderCategoryLeaderCards(areas, scoped.length);
 }
 
+/** Hotel bubble mode: each bubble = one canonical hotel venue, sized by event count. */
+function renderHotelBubbleMode(scoped) {
+  const hotelEvents = scoped.filter(e => e.hotel);
+  const catTotals = {};
+  hotelEvents.forEach(e => { catTotals[e.cat] = (catTotals[e.cat] || 0) + 1; });
+  renderBubbleControls(catTotals);
+
+  const mTitle = document.getElementById("bMatrixTitle");
+  const mSub = document.getElementById("bMatrixSub");
+  const lTitle = document.getElementById("bLeadersTitle");
+  const lSub = document.getElementById("bLeadersSub");
+  if (mTitle) mTitle.textContent = "Top Hotels × Category Concentration Bubble Matrix";
+  if (mSub) mSub.textContent = "Compare which GTA hotels host each event category (bubble area ∝ event count)";
+  if (lTitle) lTitle.textContent = "Top Hotels by Category";
+  if (lSub) lSub.textContent = "Leading GTA hotel venues for each segment under active filters · Click any card to focus on the map";
+
+  const hotelRowByName = new Map(HOTEL_ROWS.map(h => [h.name, h]));
+  const hotelMap = new Map();
+  hotelEvents.forEach(e => {
+    const hotels = e.__hotels || extractCanonicalHotels(e);
+    const isSingle = hotels.length === 1;
+    const yr = (e.start || "").slice(0, 4);
+    const latVal = isFinite(e.vlat) ? e.vlat : e.lat;
+    const lngVal = isFinite(e.vlng) ? e.vlng : e.lng;
+    hotels.forEach(canon => {
+      let rec = hotelMap.get(canon);
+      if (!rec) {
+        rec = {
+          hotel: canon,
+          sLatSum: 0, sLngSum: 0, sCount: 0,
+          latSum: 0, lngSum: 0, total: 0,
+          y2025: 0, y2026: 0, y2027: 0,
+          cats: {}, venues: {}, events: []
+        };
+        hotelMap.set(canon, rec);
+      }
+      if (isSingle && isFinite(latVal) && isFinite(lngVal)) {
+        rec.sLatSum += latVal;
+        rec.sLngSum += lngVal;
+        rec.sCount++;
+      }
+      if (isFinite(latVal) && isFinite(lngVal)) {
+        rec.latSum += latVal;
+        rec.lngSum += lngVal;
+      }
+      rec.total++;
+      if (yr === "2025") rec.y2025++;
+      else if (yr === "2026") rec.y2026++;
+      else if (yr === "2027") rec.y2027++;
+      rec.cats[e.cat] = (rec.cats[e.cat] || 0) + 1;
+      rec.venues[e.venue] = (rec.venues[e.venue] || 0) + 1;
+      rec.events.push(e);
+    });
+  });
+
+  const hotelBubbles = Array.from(hotelMap.values()).map(r => {
+    const lat = r.sCount > 0 ? (r.sLatSum / r.sCount) : (r.latSum / Math.max(1, r.total));
+    const lng = r.sCount > 0 ? (r.sLngSum / r.sCount) : (r.lngSum / Math.max(1, r.total));
+    const { domCat, domCnt } = getDominantCategory(r.cats);
+    const activeCount = activeBubbleCat === "ALL" ? r.total : (r.cats[activeBubbleCat] || 0);
+    const hRow = hotelRowByName.get(r.hotel);
+    const area = hRow ? hRow.area : "Toronto / GTA";
+    const tier = hRow ? hRow.tier : "";
+    const rank = hRow ? hRow.rank : 999;
+    return { ...r, key: r.hotel, area, tier, rank, lat, lng, domCat, domCnt, activeCount, isHotelBubble: true };
+  }).sort((a, b) => b.activeCount - a.activeCount || b.total - a.total);
+
+  /* Spread coincident hotel coordinates subtly so overlapping markers stay clickable */
+  const topHotels = hotelBubbles.filter(h => h.activeCount > 0).slice(0, 60);
+  const coordBuckets = new Map();
+  topHotels.forEach(h => {
+    const bucketKey = `${h.lat.toFixed(3)},${h.lng.toFixed(3)}`;
+    const idx = coordBuckets.get(bucketKey) || 0;
+    coordBuckets.set(bucketKey, idx + 1);
+    if (idx > 0) {
+      const angle = idx * 2.39996;
+      const dist = 0.0022 * Math.sqrt(idx);
+      h.plotLat = h.lat + Math.sin(angle) * dist * 0.72;
+      h.plotLng = h.lng + Math.cos(angle) * dist * 1.05;
+    } else {
+      h.plotLat = h.lat;
+      h.plotLng = h.lng;
+    }
+  });
+
+  const totalHotelEvents = activeBubbleCat === "ALL"
+    ? hotelEvents.length
+    : hotelEvents.filter(e => e.cat === activeBubbleCat).length;
+  document.getElementById("bActiveCount").textContent = `${fmt(totalHotelEvents)} hotel events · top ${topHotels.length} hotels`;
+
+  const catLabel = activeBubbleCat === "ALL" ? "All 9 Categories" : CAT_LABELS[activeBubbleCat];
+  document.getElementById("bMapTitle").textContent = `Hotel Venue Bubble Map: ${catLabel}`;
+  const bMapSubEl = document.getElementById("bMapSub");
+  if (bMapSubEl) {
+    bMapSubEl.textContent = "Each bubble = one canonical hotel venue · colored by #1 category · click any hotel to inspect & open filtered on Demand Map";
+  }
+
+  if (selectedAreaKey && !topHotels.some(h => h.key === selectedAreaKey)) {
+    selectedAreaKey = null;
+  }
+
+  bubbleRenderCtx = { areas: topHotels, dispMode: "hotel", scoped: hotelEvents };
+  syncBubbleSelectionUI();
+  renderAreaCategoryBubbleMatrix(topHotels.map(h => ({ ...h, area: shortHotelBubbleLabel(h.hotel), fullName: h.hotel })));
+  renderCategoryLeaderCards(topHotels.map(h => ({ ...h, area: h.hotel })), hotelEvents.length);
+}
+
 /** Return the category key with the largest event count in a category map. */
 function getDominantCategory(cats) {
   let domCat = "conference", domCnt = -1;
@@ -613,15 +773,31 @@ function getDominantCategory(cats) {
 }
 
 /** Build an aggregate summary across all events in the current filter scope. */
-function buildAllAreasSummary(scoped) {
+function buildAllAreasSummary(scoped, dispMode) {
   if (!scoped.length) return null;
   const cats = {}, venues = {};
+  const isHotelMode = dispMode === "hotel";
   scoped.forEach(e => {
     cats[e.cat] = (cats[e.cat] || 0) + 1;
-    venues[e.venue] = (venues[e.venue] || 0) + 1;
+    if (isHotelMode) {
+      (e.__hotels || extractCanonicalHotels(e)).forEach(h => {
+        venues[h] = (venues[h] || 0) + 1;
+      });
+    } else {
+      venues[e.venue] = (venues[e.venue] || 0) + 1;
+    }
   });
   const { domCat, domCnt } = getDominantCategory(cats);
-  return { area: "All Regions (GTA)", total: scoped.length, cats, venues, domCat, domCnt, isAll: true };
+  return {
+    area: isHotelMode ? "All Hotel Venues (GTA)" : "All Regions (GTA)",
+    total: scoped.length,
+    cats,
+    venues,
+    domCat,
+    domCnt,
+    isAll: true,
+    isHotelMode
+  };
 }
 
 /** Sync bubble highlight state and right-side inspector panel. */
@@ -634,18 +810,18 @@ function syncBubbleSelectionUI() {
     renderCatLeafletBubbles(areas, dispMode);
   }
   const activeObj = selectedAreaKey
-    ? (areas.find(a => a.area === selectedAreaKey) || buildAllAreasSummary(scoped))
-    : buildAllAreasSummary(scoped);
-  renderAreaInspector(activeObj);
+    ? (areas.find(a => (a.key || a.area) === selectedAreaKey) || buildAllAreasSummary(scoped, dispMode))
+    : buildAllAreasSummary(scoped, dispMode);
+  renderAreaInspector(activeObj, dispMode);
 }
 
-/** Toggle a region bubble: click once to inspect it, click again to show all events. */
-function toggleAreaSelection(areaName) {
-  selectedAreaKey = selectedAreaKey === areaName ? null : areaName;
+/** Toggle a region/hotel bubble: click once to inspect it, click again to show all events. */
+function toggleAreaSelection(itemKey) {
+  selectedAreaKey = selectedAreaKey === itemKey ? null : itemKey;
   syncBubbleSelectionUI();
 }
 
-/** Clear region selection and restore the All Events inspector summary. */
+/** Clear region/hotel selection and restore the All Events inspector summary. */
 function clearAreaSelection() {
   if (!selectedAreaKey) return;
   selectedAreaKey = null;
@@ -664,6 +840,47 @@ function renderCatLeafletBubbles(areas, dispMode) {
 
   const nonZero = areas.filter(a => a.activeCount > 0);
   const maxVal = Math.max(1, ...nonZero.map(a => a.activeCount));
+
+  if (dispMode === "hotel") {
+    const topLabelKeys = new Set(nonZero.slice(0, 12).map(h => h.key));
+    nonZero.slice().reverse().forEach(h => {
+      const color = activeBubbleCat === "ALL" ? CAT_COLORS[h.domCat] : CAT_COLORS[activeBubbleCat];
+      const size = bubblePixelSize(h.activeCount, maxVal, 20, 62);
+      const isSel = h.key === selectedAreaKey;
+      const showLbl = isSel || topLabelKeys.has(h.key);
+      const share = activeBubbleCat === "ALL"
+        ? `${CAT_SHORT[h.domCat]} ${Math.round((h.domCnt / Math.max(1, h.total)) * 100)}%`
+        : `${Math.round((h.activeCount / Math.max(1, h.total)) * 100)}% of hotel`;
+      const tierTag = h.tier ? ` · ${h.tier}` : "";
+      const lblHtml = showLbl ? `<span class="area-bubble-lbl">${esc(shortHotelBubbleLabel(h.hotel))}</span>` : "";
+
+      const marker = L.marker([h.plotLat ?? h.lat, h.plotLng ?? h.lng], {
+        icon: L.divIcon({
+          className: "area-bubble-icon",
+          html: `<div class="area-bubble-wrap ${isSel ? "selected" : ""}" style="width:${size}px;height:${size}px;background:${color};font-size:${size < 28 ? 10 : (size < 38 ? 11 : 13)}px;">
+            ${fmt(h.activeCount)}
+            ${lblHtml}
+          </div>`,
+          iconSize: [0, 0]
+        }),
+        zIndexOffset: isSel ? 1200 : (1000 - size)
+      });
+
+      marker.bindTooltip(
+        `<b>${esc(h.hotel)}</b><br>` +
+        `<span style="color:#4c5a50">${esc(h.area)}${esc(tierTag)}</span><br>` +
+        `${activeBubbleCat === "ALL" ? "Total" : esc(CAT_SHORT[activeBubbleCat])}: <b>${fmt(h.activeCount)}</b> events (${esc(share)})` +
+        `<br><small>2025: ${fmt(h.y2025)} · 2026: ${fmt(h.y2026)} · 2027: ${fmt(h.y2027)}</small>` +
+        `<br><small>${isSel ? "Click again to show all hotel events" : "Click to inspect hotel"}</small>`,
+        { direction: "top", offset: [0, -10] }
+      );
+      marker.on("click", () => {
+        toggleAreaSelection(h.key);
+      });
+      marker.addTo(catLayer);
+    });
+    return;
+  }
 
   if (activeBubbleCat === "ALL" && dispMode === "cluster") {
     let maxCat = 1;
@@ -746,6 +963,8 @@ function renderCatFallbackSvg(areas, dispMode) {
 
   const nonZero = areas.filter(a => a.activeCount > 0);
   const maxVal = Math.max(1, ...nonZero.map(a => a.activeCount));
+  const isHotelMode = dispMode === "hotel";
+  const topLabelKeys = isHotelMode ? new Set(nonZero.slice(0, 10).map(h => h.key)) : null;
 
   const out = [
     `<rect x="0" y="0" width="${W}" height="${H}" fill="#eef1ea"/>`,
@@ -754,22 +973,59 @@ function renderCatFallbackSvg(areas, dispMode) {
   ];
 
   nonZero.slice().reverse().forEach(a => {
-    const cx = x(a.lng).toFixed(1), cy = y(a.lat).toFixed(1);
-    const r = (bubblePixelSize(a.activeCount, maxVal, 22, 68) / 2).toFixed(1);
+    const key = a.key || a.area;
+    const label = isHotelMode ? shortHotelBubbleLabel(a.hotel) : a.area;
+    const cx = x(a.plotLng ?? a.lng).toFixed(1), cy = y(a.plotLat ?? a.lat).toFixed(1);
+    const r = (bubblePixelSize(a.activeCount, maxVal, isHotelMode ? 18 : 22, isHotelMode ? 56 : 68) / 2).toFixed(1);
     const color = activeBubbleCat === "ALL" ? CAT_COLORS[a.domCat] : CAT_COLORS[activeBubbleCat];
-    const stroke = a.area === selectedAreaKey ? "#111827" : "#ffffff";
-    out.push(`<g style="cursor:pointer" onclick="window.__selectFallbackArea('${esc(a.area).replace(/'/g, "\\'")}')">
+    const isSel = key === selectedAreaKey;
+    const stroke = isSel ? "#111827" : "#ffffff";
+    const showLbl = !isHotelMode || isSel || topLabelKeys.has(key);
+    out.push(`<g style="cursor:pointer" onclick="window.__selectFallbackArea('${esc(key).replace(/'/g, "\\'")}')">
+      <title>${esc(isHotelMode ? `${a.hotel} (${a.area})` : a.area)} — ${fmt(a.activeCount)} events</title>
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" fill-opacity="0.86" stroke="${stroke}" stroke-width="2.5"/>
       <text x="${cx}" y="${Number(cy) + 4}" text-anchor="middle" fill="#fff" font-size="11" font-weight="800">${fmt(a.activeCount)}</text>
-      <text x="${cx}" y="${Number(cy) + Number(r) + 13}" text-anchor="middle" fill="#1c2420" font-size="10.5" font-weight="700">${esc(a.area)}</text>
+      ${showLbl ? `<text x="${cx}" y="${Number(cy) + Number(r) + 13}" text-anchor="middle" fill="#1c2420" font-size="10.5" font-weight="700">${esc(label)}</text>` : ""}
     </g>`);
   });
 
   svg.innerHTML = out.join("");
-  window.__selectFallbackArea = areaName => toggleAreaSelection(areaName);
+  window.__selectFallbackArea = itemKey => toggleAreaSelection(itemKey);
 }
 
-function renderAreaInspector(areaObj) {
+/** Build a Demand Map URL carrying all active Tab 1 filters (region/hotel, category, year, venue type). */
+function buildDemandMapHref(areaObj, dispMode) {
+  const params = new URLSearchParams();
+  const yr = document.getElementById("bYear").value;
+  const hFlag = document.getElementById("bHotel").value;
+  const isAll = !areaObj || Boolean(areaObj.isAll);
+
+  if (!isAll) {
+    if (areaObj.isHotelBubble || dispMode === "hotel") {
+      params.set("hotelName", areaObj.hotel);
+      params.set("hotel", "1");
+    } else {
+      params.set("area", areaObj.area);
+      if (hFlag === "1") params.set("hotel", "1");
+      else if (hFlag === "0") params.set("hotel", "0");
+    }
+  } else {
+    if (dispMode === "hotel" || hFlag === "1") params.set("hotel", "1");
+    else if (hFlag === "0") params.set("hotel", "0");
+  }
+
+  if (activeBubbleCat !== "ALL") {
+    params.set("cat", activeBubbleCat);
+  }
+  if (yr !== "ALL") {
+    params.set("year", yr);
+  } else {
+    params.set("all", "1");
+  }
+  return "map.html?" + params.toString();
+}
+
+function renderAreaInspector(areaObj, dispMode) {
   const titleEl = document.getElementById("inspAreaTitle");
   const subEl = document.getElementById("inspAreaSub");
   const clearBtn = document.getElementById("inspClearBtn");
@@ -790,22 +1046,38 @@ function renderAreaInspector(areaObj) {
   }
 
   const isAll = Boolean(areaObj.isAll);
-  titleEl.textContent = isAll
-    ? `All Events — All GTA (${fmt(areaObj.total)} events)`
-    : `${areaObj.area} (${fmt(areaObj.total)} events)`;
-  const rawParts = !isAll && areaObj.rawAreas
-    ? Object.entries(areaObj.rawAreas).sort((a, b) => b[1] - a[1])
-    : [];
-  const groupedNote = rawParts.length > 1
-    ? ` · Grouped from ${rawParts.map(([k, n]) => `${k} (${fmt(n)})`).join(", ")}`
-    : "";
-  subEl.textContent = `Primary category: ${CAT_LABELS[areaObj.domCat]} (${Math.round((areaObj.domCnt / areaObj.total) * 100)}%)${groupedNote}`;
-  if (clearBtn) clearBtn.style.display = isAll ? "none" : "";
-  if (venuesTitleEl) venuesTitleEl.textContent = isAll ? "Top Venues (All GTA)" : "Top Venues in Region";
+  const isHotelBubble = Boolean(areaObj.isHotelBubble);
+  const isHotelMode = dispMode === "hotel" || Boolean(areaObj.isHotelMode);
+
+  if (isHotelBubble) {
+    const tierNote = areaObj.tier ? ` · ${areaObj.tier}` : "";
+    titleEl.textContent = `${areaObj.hotel} (${fmt(areaObj.total)} events)`;
+    subEl.textContent = `${areaObj.area}${tierNote} · Primary: ${CAT_LABELS[areaObj.domCat]} (${Math.round((areaObj.domCnt / Math.max(1, areaObj.total)) * 100)}%)`;
+    if (clearBtn) clearBtn.style.display = "";
+    if (venuesTitleEl) venuesTitleEl.textContent = "Year Split & Top Events at Hotel";
+  } else if (isAll) {
+    titleEl.textContent = isHotelMode
+      ? `All Hotel Venues — All GTA (${fmt(areaObj.total)} events)`
+      : `All Events — All GTA (${fmt(areaObj.total)} events)`;
+    subEl.textContent = `Primary category: ${CAT_LABELS[areaObj.domCat]} (${Math.round((areaObj.domCnt / Math.max(1, areaObj.total)) * 100)}%)`;
+    if (clearBtn) clearBtn.style.display = "none";
+    if (venuesTitleEl) venuesTitleEl.textContent = isHotelMode ? "Top Hotel Venues (All GTA)" : "Top Venues (All GTA)";
+  } else {
+    titleEl.textContent = `${areaObj.area} (${fmt(areaObj.total)} events)`;
+    const rawParts = areaObj.rawAreas
+      ? Object.entries(areaObj.rawAreas).sort((a, b) => b[1] - a[1])
+      : [];
+    const groupedNote = rawParts.length > 1
+      ? ` · Grouped from ${rawParts.map(([k, n]) => `${k} (${fmt(n)})`).join(", ")}`
+      : "";
+    subEl.textContent = `Primary category: ${CAT_LABELS[areaObj.domCat]} (${Math.round((areaObj.domCnt / Math.max(1, areaObj.total)) * 100)}%)${groupedNote}`;
+    if (clearBtn) clearBtn.style.display = "";
+    if (venuesTitleEl) venuesTitleEl.textContent = "Top Venues in Region";
+  }
 
   const catEntries = Object.entries(areaObj.cats).sort((a, b) => b[1] - a[1]);
   barsEl.innerHTML = catEntries.map(([c, cnt]) => {
-    const pct = ((cnt / areaObj.total) * 100).toFixed(1);
+    const pct = ((cnt / Math.max(1, areaObj.total)) * 100).toFixed(1);
     const hl = activeBubbleCat === c ? "font-weight:800;text-decoration:underline;" : "";
     return `<div class="bar-row">
       <div class="bar-row-head">
@@ -819,18 +1091,40 @@ function renderAreaInspector(areaObj) {
     </div>`;
   }).join("");
 
-  const topVenues = Object.entries(areaObj.venues).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  venuesEl.innerHTML = topVenues.map(([v, cnt]) =>
-    `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line);">
-      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(v)}">${esc(v)}</span>
-      <span style="font-weight:700;white-space:nowrap;">${fmt(cnt)}</span>
-    </div>`
-  ).join("");
+  if (isHotelBubble) {
+    const yearRow = `<div style="display:flex;gap:8px;flex-wrap:wrap;padding:2px 0 6px;border-bottom:1px dashed var(--line);font-size:12px;">
+      <span>2025: <b>${fmt(areaObj.y2025)}</b></span>
+      <span>2026: <b>${fmt(areaObj.y2026)}</b></span>
+      <span style="color:var(--accent);">2027: <b>${fmt(areaObj.y2027)}</b></span>
+    </div>`;
+    const sampleEvents = (areaObj.events || [])
+      .filter(e => activeBubbleCat === "ALL" || e.cat === activeBubbleCat)
+      .slice()
+      .sort((a, b) => (b.att || 0) - (a.att || 0) || (b.start || "").localeCompare(a.start || ""))
+      .slice(0, 4);
+    const evRows = sampleEvents.map(ev =>
+      `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line);">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(ev.name)} (${esc(ev.start)})">${esc(ev.name)}</span>
+        <span style="color:var(--muted);font-size:11.5px;white-space:nowrap;">${esc((ev.start || "").slice(0, 7))}</span>
+      </div>`
+    ).join("");
+    venuesEl.innerHTML = yearRow + evRows;
+  } else {
+    const topVenues = Object.entries(areaObj.venues).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    venuesEl.innerHTML = topVenues.map(([v, cnt]) =>
+      `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line);">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(v)}">${esc(v)}</span>
+        <span style="font-weight:700;white-space:nowrap;">${fmt(cnt)}</span>
+      </div>`
+    ).join("");
+  }
 
-  const mapHref = isAll
-    ? "map.html?all=1"
-    : `map.html?q=${encodeURIComponent(areaMapSearchQuery(areaObj.area))}&all=1`;
-  const mapLabel = isAll ? "📍 View all events on Demand Map ↗" : "📍 View this region on Demand Map ↗";
+  const mapHref = buildDemandMapHref(areaObj, dispMode);
+  const mapLabel = isHotelBubble
+    ? "📍 View this hotel on Demand Map ↗"
+    : isAll
+      ? (isHotelMode ? "📍 View all hotel events on Demand Map ↗" : "📍 View filtered events on Demand Map ↗")
+      : "📍 View this region on Demand Map ↗";
   btnWrap.innerHTML = `<a class="btn-mini" style="width:100%;text-align:center;padding:8px 12px;" href="${mapHref}">${mapLabel}</a>`;
 }
 
@@ -1014,7 +1308,7 @@ window.renderHotelsTable = function () {
     const tierHtml = h.tier
       ? `<span class="tier-badge ${h.tier === "Top 10" ? "tier-1" : "tier-2"}">${esc(h.tier)}</span>`
       : "";
-    const shortQ = encodeURIComponent(h.name.split(",")[0]);
+    const hotelParam = encodeURIComponent(h.name);
     const displayNum = showLiveRank ? (idx + 1) : h.rank;
     return `<tr>
       <td style="font-family:ui-monospace,monospace;color:var(--muted);">${displayNum}</td>
@@ -1029,7 +1323,7 @@ window.renderHotelsTable = function () {
       <td>
         <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--blue)"></div></div>
       </td>
-      <td class="center"><a class="btn-mini" href="map.html?q=${shortQ}&all=1">📍 Map</a></td>
+      <td class="center"><a class="btn-mini" href="map.html?hotelName=${hotelParam}&hotel=1&all=1">📍 Map</a></td>
     </tr>`;
   }).join("");
 };
